@@ -18,6 +18,10 @@ public final class CompatMods {
     public static final boolean MAID_RESTAURANT = ModList.get().isLoaded("maid_restaurant");
     /** 必需链：森罗厨房（本体 0.2.9 硬依赖，运行环境必有）。 */
     public static final boolean KALEIDOSCOPE_COOKERY = ModList.get().isLoaded("kaleidoscope_cookery");
+    /** 森罗物语：国味（腌菜罐/冰箱冷藏）。 */
+    public static final boolean KALEIDOSCOPE_CHINESEFOOD = ModList.get().isLoaded("kaleidoscope_chinesefood");
+    /** 森罗酒馆：世界名酒（冰柜）。 */
+    public static final boolean KALEIDOSCOPE_WORLD_LIQUOR = ModList.get().isLoaded("kaleidoscope_world_liquor");
 
     public static final boolean FARMERSDELIGHT = ModList.get().isLoaded("farmersdelight");
     public static final boolean FARM_AND_CHARM = ModList.get().isLoaded("farm_and_charm");
@@ -58,6 +62,8 @@ public final class CompatMods {
             return;
         }
         Map<String, Boolean> optional = new LinkedHashMap<>();
+        optional.put("kaleidoscope_chinesefood", KALEIDOSCOPE_CHINESEFOOD);
+        optional.put("kaleidoscope_world_liquor", KALEIDOSCOPE_WORLD_LIQUOR);
         optional.put("farmersdelight", FARMERSDELIGHT);
         optional.put("farm_and_charm", FARM_AND_CHARM);
         optional.put("brewinandchewin", BREWINANDCHEWIN);

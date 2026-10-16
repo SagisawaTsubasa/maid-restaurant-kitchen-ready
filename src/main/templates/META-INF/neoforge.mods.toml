@@ -58,6 +58,20 @@ description='''
     side="BOTH"
 
 [[dependencies.${mod_id}]]
+    modId="kaleidoscope_chinesefood"
+    type="optional"
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="kaleidoscope_world_liquor"
+    type="optional"
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
     modId="farm_and_charm"
     type="optional"
     versionRange="[0,)"

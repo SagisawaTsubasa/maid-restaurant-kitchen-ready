@@ -1,0 +1,165 @@
+package com.sagisawa.maidrestaurantcooking.cooktask.chinesefood;
+
+import com.bmt.kaleidoscope_chinesefood.block.PickleJarBlock;
+import com.bmt.kaleidoscope_chinesefood.block.entity.PickleJarBlockEntity;
+import com.bmt.kaleidoscope_chinesefood.crafting.PickleJarRecipe;
+import com.bmt.kaleidoscope_chinesefood.init.ModBlocks;
+import com.bmt.kaleidoscope_chinesefood.init.ModRecipes;
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.mastermarisa.maid_restaurant.request.CookRequest;
+import com.mastermarisa.maid_restaurant.utils.FakePlayerUtils;
+import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
+import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
+import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.cooktask.timed.AbstractTimedContainerCookTask;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
+
+/**
+ * 国味「腌菜罐」（kaleidoscope_chinesefood:pickle_jar，7 条）的女仆烹饪任务。
+ *
+ * <p>实证（2026-10-17）：4 格 ItemStackHandler（public 字段）；流程 = 开盖放料 →
+ * 关盖（useWithoutItem 语义：OPEN=false + tryStartFermenting 决定 FERMENTING）→
+ * tick 发酵 → 完成后槽内变产物（output.count*4 上限 16）。女仆流程：有产物即逐槽取
+ * （直读 inventory + cookery ItemUtils 交给女仆，绕开 extractItem 需 Player 的限制，
+ * 插料用 FakePlayer 规避同参）；无产物则投料 + 关盖 + 公共启动口 checkForValidRecipeAndTryStartFermenting。
+ */
+public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarRecipe> {
+
+    @Override
+    public String getUID() {
+        return "PickleJarCookTask";
+    }
+
+    @Override
+    public ItemStack getIcon() {
+        return new ItemStack(ModBlocks.PICKLE_JAR.get().asItem());
+    }
+
+    @Override
+    protected RecipeType<PickleJarRecipe> recipeType() {
+        return ModRecipes.PICKLE_JAR_TYPE.get();
+    }
+
+    @Override
+    protected Class<PickleJarRecipe> recipeClass() {
+        return PickleJarRecipe.class;
+    }
+
+    @Override
+    protected ItemStack recipeResult(PickleJarRecipe recipe, Level level) {
+        return recipe.getResultItem(level.registryAccess());
+    }
+
+    @Override
+    protected Predicate<BlockPos> workBlockFilter(ServerLevel level) {
+        return pos -> level.getBlockEntity(pos) instanceof PickleJarBlockEntity;
+    }
+
+    @Override
+    public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
+        PickleJarRecipe recipe = (PickleJarRecipe) recipeHolder.value();
+        List<StackPredicate> ans = new ArrayList<>();
+        for (Ingredient ingredient : recipe.getIngredients()) {
+            if (!ingredient.isEmpty()) {
+                ans.add(StackPredicate.of(ingredient));
+            }
+        }
+        return ans;
+    }
+
+    @Override
+    public List<ItemStack> getCurrentInput(Level level, BlockPos pos, EntityMaid maid) {
+        List<ItemStack> ans = new ArrayList<>();
+        if (level.getBlockEntity(pos) instanceof PickleJarBlockEntity jar) {
+            for (int i = 0; i < jar.inventory.getSlots(); i++) {
+                ItemStack stack = jar.inventory.getStackInSlot(i);
+                if (!stack.isEmpty()) {
+                    ans.add(stack.copy());
+                }
+            }
+        }
+        return ans;
+    }
+
+    @Override
+    public boolean isValidWorkBlock(ServerLevel level, EntityMaid maid, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof PickleJarBlockEntity;
+    }
+
+    @Override
+    public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
+        PickleJarBlockEntity jar = level.getBlockEntity(pos) instanceof PickleJarBlockEntity j ? j : null;
+        if (jar == null) {
+            return;
+        }
+        PickleJarRecipe recipe = resolveRecipe(level, request);
+        if (recipe == null) {
+            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] pickle_jar 请求配方缺失或类型不符：{}", request.id);
+            return;
+        }
+
+        BlockState state = level.getBlockState(pos);
+        boolean fermenting = state.getValue(PickleJarBlock.FERMENTING);
+        if (fermenting) {
+            return;
+        }
+
+        // 完成判定：槽内出现产物 → 逐槽取走（一次一槽，每取 remain--）
+        ItemStack output = recipe.getResultItem(level.registryAccess());
+        for (int i = 0; i < jar.inventory.getSlots(); i++) {
+            ItemStack stored = jar.inventory.getStackInSlot(i);
+            if (!stored.isEmpty() && ItemStack.isSameItemSameComponents(stored, output)) {
+                ItemUtils.getItemToLivingEntity(maid, stored.copy());
+                jar.inventory.setStackInSlot(i, ItemStack.EMPTY);
+                jar.setChanged();
+                maid.swing(InteractionHand.OFF_HAND);
+                request.remain--;
+                return;
+            }
+        }
+
+        // 无产物：投料（每 tick 至多一种原料 1 个，槽满自动停）
+        boolean inserted = false;
+        for (Ingredient ingredient : recipe.getIngredients()) {
+            if (ingredient.isEmpty()) {
+                continue;
+            }
+            boolean present = false;
+            for (int i = 0; i < jar.inventory.getSlots(); i++) {
+                if (ingredient.test(jar.inventory.getStackInSlot(i))) {
+                    present = true;
+                    break;
+                }
+            }
+            if (present) {
+                continue;
+            }
+            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
+            if (!take.isEmpty()) {
+                jar.insertItem(take, FakePlayerUtils.getPlayer(level));
+                maid.swing(InteractionHand.OFF_HAND);
+                inserted = true;
+            }
+        }
+
+        // 关盖并尝试启动发酵（BE 公共口；无有效配方则保持待料）
+        if (inserted || state.getValue(PickleJarBlock.OPEN)) {
+            level.setBlock(pos, state.setValue(PickleJarBlock.OPEN, false), 3);
+            jar.checkForValidRecipeAndTryStartFermenting();
+        }
+    }
+}
