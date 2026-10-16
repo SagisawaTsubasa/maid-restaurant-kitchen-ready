@@ -38,10 +38,10 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
 
     @Override
     public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
-        if (!(level.getBlockEntity(pos) instanceof net.minecraft.world.level.block.entity.BlockEntity be)
-                || !(be instanceof net.minecraft.world.Container container)) {
+        if (!(level.getBlockEntity(pos) instanceof net.minecraft.world.Container container)) {
             return;
         }
+        var be = (net.minecraft.world.level.block.entity.BlockEntity) container;
         R recipe = resolveRecipe(level, request);
         if (recipe == null) {
             MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] 加热锅请求配方缺失或类型不符：{}（{}）", request.id, getUID());
@@ -83,16 +83,20 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
             if (take.isEmpty()) {
                 continue;
             }
+            boolean putIn = false;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 if (container.getItem(i).isEmpty()) {
                     container.setItem(i, take);
                     be.setChanged();
-                    supplied = true;
+                    putIn = true;
                     break;
                 }
             }
-            if (supplied) {
+            if (putIn) {
                 maid.swing(InteractionHand.OFF_HAND);
+            } else {
+                ItemUtils.getItemToLivingEntity(maid, take);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] {} 满槽放料失败，原料已回包：{}", getUID(), request.id);
             }
         }
     }

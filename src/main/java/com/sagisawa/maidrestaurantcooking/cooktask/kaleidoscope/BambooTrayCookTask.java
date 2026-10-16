@@ -5,6 +5,7 @@ import com.github.ysbbbbbb.kaleidoscopecookery.blockentity.kitchen.BambooTrayBlo
 import com.github.ysbbbbbb.kaleidoscopecookery.crafting.recipe.BambooTrayRecipe;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModRecipes;
+import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
 import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.BlockUsageManager;
@@ -92,8 +93,7 @@ public class BambooTrayCookTask implements ICookTask {
 
     @Override
     public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
-        BambooTrayBlockEntity tray = (BambooTrayBlockEntity) level.getBlockEntity(pos);
-        if (tray == null) {
+        if (!(level.getBlockEntity(pos) instanceof BambooTrayBlockEntity tray)) {
             return;
         }
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
@@ -121,7 +121,17 @@ public class BambooTrayCookTask implements ICookTask {
             }
         }
 
-        // 3) 放料：从女仆背包取 1 个投入第一个空槽
+        // 3) 放料：先探空槽再抽（F-002 防吞），投入第一个空槽
+        boolean hasEmpty = false;
+        for (int slot = 0; slot < tray.getContainerSize(); slot++) {
+            if (tray.getItem(slot).isEmpty()) {
+                hasEmpty = true;
+                break;
+            }
+        }
+        if (!hasEmpty) {
+            return;
+        }
         ItemStack input = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(recipe.getIngredient()), true);
         if (input.isEmpty()) {
             return;
@@ -133,6 +143,8 @@ public class BambooTrayCookTask implements ICookTask {
                 return;
             }
         }
+        ItemUtils.getItemToLivingEntity(maid, input);
+        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] bamboo_tray 满槽放料失败，原料已回包：{}", request.id);
     }
 
     @Override

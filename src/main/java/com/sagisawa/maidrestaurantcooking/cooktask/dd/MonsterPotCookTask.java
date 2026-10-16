@@ -47,8 +47,11 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
 
     @Override
     protected RecipeType<?> recipeType() {
-        // DD 注册自己的 monster_cooking 类型（非 FD cooking）；经注册表键查避免注册类差异
+        // DD 注册自己的 monster_cooking 类型（非 FD cooking）；经注册表键查；空值守卫（F-007）
         RecipeType<?> t = BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.fromNamespaceAndPath("dungeonsdelight", "monster_cooking"));
+        if (t == null) {
+            throw new IllegalStateException("dungeonsdelight:monster_cooking RecipeType 未注册（目标 mod 版本不符？）");
+        }
         return t;
     }
 
@@ -118,8 +121,8 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
         ItemStack meal = pot.getMeal();
         if (!meal.isEmpty()) {
             ItemStack container = recipe.getOutputContainer();
-            ItemStack bowl = container.isEmpty() ? new ItemStack(net.minecraft.world.item.Items.BOWL)
-                    : ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(container), true);
+            // F-021：容器谓词原样交给 BE 校验（useHeldItemOnMeal→isContainerValid）；无容器配方不打空碗
+            ItemStack bowl = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(container), true);
             if (bowl.isEmpty()) {
                 return;
             }
@@ -154,14 +157,17 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
             }
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
             if (!take.isEmpty()) {
+                boolean putIn = false;
                 for (int i = 0; i <= 5; i++) {
                     if (inv.getStackInSlot(i).isEmpty()) {
                         inv.setStackInSlot(i, take);
+                        putIn = true;
                         supplied = true;
                         break;
                     }
                 }
-                if (!supplied) {
+                if (!putIn) {
+                    // F-003：按本次放入判定归还
                     ItemUtils.getItemToLivingEntity(maid, take);
                 }
             }

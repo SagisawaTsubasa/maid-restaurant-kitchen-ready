@@ -151,8 +151,20 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
             if (!take.isEmpty()) {
                 jar.insertItem(take, FakePlayerUtils.getPlayer(level));
-                maid.swing(InteractionHand.OFF_HAND);
-                inserted = true;
+                // F-013：insertItem 返回 void 且对传入栈 shrink——核对是否真插入
+                boolean landed = false;
+                for (int i = 0; i < jar.inventory.getSlots(); i++) {
+                    if (ingredient.test(jar.inventory.getStackInSlot(i))) {
+                        landed = true;
+                        break;
+                    }
+                }
+                if (landed) {
+                    maid.swing(InteractionHand.OFF_HAND);
+                    inserted = true;
+                } else {
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 腌菜罐投料未落槽（槽满或被拒）：{} @ {}", request.id, pos);
+                }
             }
         }
 

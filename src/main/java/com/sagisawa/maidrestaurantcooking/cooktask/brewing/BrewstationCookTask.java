@@ -43,7 +43,11 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
 
     @Override
     protected RecipeType<?> recipeType() {
-        return BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.fromNamespaceAndPath("brewery", "brewing"));
+        RecipeType<?> t = BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.fromNamespaceAndPath("brewery", "brewing"));
+        if (t == null) {
+            throw new IllegalStateException("brewery:brewing RecipeType 未注册（目标 mod 版本不符？）");
+        }
+        return t;
     }
 
     @Override
@@ -98,8 +102,9 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             } else {
-                // 别的酒（他单残留）：交女仆不吞
+                // F-016：他单残留成品酒——交女仆不吞，但响出来便于发现混单
                 ItemUtils.getItemToLivingEntity(maid, beer);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] brewstation 取到非本单成品（可能他单残留）：{} @ {}", beer.getItem(), request.id);
             }
             return;
         }
@@ -111,8 +116,14 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
             }
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
             if (!take.isEmpty()) {
-                station.addIngredient(take);
-                maid.swing(InteractionHand.OFF_HAND);
+                var result = station.addIngredient(take);
+                if (result.consumesAction()) {
+                    maid.swing(InteractionHand.OFF_HAND);
+                } else {
+                    // F-013：投料被拒（槽满/不符）——原料回包
+                    ItemUtils.getItemToLivingEntity(maid, take);
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 酿酒台投料被拒，原料回包：{} @ {}", request.id, pos);
+                }
             }
         }
     }

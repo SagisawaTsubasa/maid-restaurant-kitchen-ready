@@ -29,7 +29,8 @@ import java.util.function.Predicate;
  * 沉浸农艺「绞肉机」（farm_and_charm:mincer，59 条）的女仆烹饪任务。
  *
  * <p>实证：手摇驱动——BE tick 依 CRANK 方块属性自减，cranked 计满 20 转化 1 输入；
- * 女仆复制摇柄：投料（slot0，CRANK==0 时）→ 每 tick 给 CRANK 补 8 → 输出 slot1 取走。
+ * 女仆复制摇柄：投料（slot0，CRANK==0 时）→ CRANK 静止且输入在位时一次性补 8 →
+ * BE tick 自行推进（每 tick --crank，cranked++ 至 20 转化）→ 输出 slot1 取走。
  * 刀盘分 recipe_type 字符串（MincerRecipe.getRecipeType），全部并入本任务。
  */
 public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe> {

@@ -34,11 +34,31 @@ public class MaidRestaurantCooking {
         CookTaskRegistry.registerAll();
 
         modEventBus.addListener(this::commonSetup);
+        // F-006：配置热重载时使炉式路由缓存失效（routingRules 改动即时生效）
+        modEventBus.addListener(this::onConfigReload);
         LOGGER.info("[xia-de-chu-fang] 女仆餐厅：下得厨房已加载（v{}）", modContainer.getModInfo().getVersion());
     }
 
+    private void onConfigReload(final net.neoforged.fml.event.config.ModConfigEvent.Reloading event) {
+        if (event.getConfig().getModId().equals(MOD_ID)) {
+            com.sagisawa.maidrestaurantcooking.config.FurnaceRouting.invalidate();
+            LOGGER.info("[xia-de-chu-fang] 配置重载，炉式路由缓存已失效重建");
+        }
+    }
+
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // M0 骨架期无任务可冲刷；M1 起批量注册器的入队动作都在各 mod 构造期完成，
-        // 这里只保留生命周期占位（若后续需要 enqueueWork 自检，在此追加）。
+        // F-009：本体冲刷后自检——本包入队的每个任务都必须能从 taskMap 反查到（后到覆盖/冲刷失败即 ERROR 响）
+        event.enqueueWork(() -> {
+            int mine = 0;
+            for (var task : com.sagisawa.maidrestaurantcooking.compat.CookTaskRegistry.registered()) {
+                mine++;
+                var found = com.mastermarisa.maid_restaurant.utils.CookTasks.getTask(task.getType());
+                if (found == null) {
+                    LOGGER.error("[xia-de-chu-fang] 注册自检失败：任务 {}（type={}）未进入本体 taskMap——同键后到覆盖或冲刷异常！",
+                            task.getUID(), task.getType());
+                }
+            }
+            LOGGER.info("[xia-de-chu-fang] 注册自检：本包任务 {} 个已冲刷核对", mine);
+        });
     }
 }

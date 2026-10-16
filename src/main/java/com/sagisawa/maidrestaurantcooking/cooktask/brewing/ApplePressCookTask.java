@@ -129,13 +129,19 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
             }
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
             if (!take.isEmpty()) {
+                boolean putIn = false;
                 for (int i = 0; i < press.getContainerSize(); i++) {
                     if (press.getItem(i).isEmpty()) {
                         press.setItem(i, take);
                         press.setChanged();
+                        putIn = true;
                         maid.swing(InteractionHand.OFF_HAND);
                         break;
                     }
+                }
+                if (!putIn) {
+                    ItemUtils.getItemToLivingEntity(maid, take);
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] apple_press 满槽放料失败，原料已回包：{}", request.id);
                 }
             }
         }

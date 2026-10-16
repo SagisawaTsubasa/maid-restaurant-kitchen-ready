@@ -55,8 +55,11 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
 
     @Override
     protected RecipeType<?> recipeType() {
-        // herbalbrews 用 architectury RegistrySupplier——同筒仓，经注册表键查
+        // herbalbrews 用 architectury RegistrySupplier——同筒仓，经注册表键查；空值守卫（F-007）
         RecipeType<?> t = BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.fromNamespaceAndPath("herbalbrews", "kettle_brewing"));
+        if (t == null) {
+            throw new IllegalStateException("herbalbrews:kettle_brewing RecipeType 未注册（目标 mod 版本不符？）");
+        }
         return t;
     }
 

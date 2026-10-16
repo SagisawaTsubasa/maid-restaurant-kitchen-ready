@@ -126,7 +126,17 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
             }
         }
 
-        // 投料：第一个空槽放 1 组
+        // 投料：先探空槽再抽（F-002 防吞）
+        boolean hasEmpty = false;
+        for (int i = 0; i < be.getContainerSize(); i++) {
+            if (be.getItem(i).isEmpty()) {
+                hasEmpty = true;
+                break;
+            }
+        }
+        if (!hasEmpty) {
+            return;
+        }
         ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(inputIngredient), true);
         if (take.isEmpty()) {
             return;
@@ -139,6 +149,8 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
                 return;
             }
         }
+        ItemUtils.getItemToLivingEntity(maid, take);
+        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 满槽放料失败，原料已回包：{}", request.id);
     }
 
     /** 冰冻（下半）。 */

@@ -53,6 +53,9 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
         RecipeType<?> t = typeCache;
         if (t == null) {
             t = BuiltInRegistries.RECIPE_TYPE.get(ResourceLocation.fromNamespaceAndPath("farm_and_charm", "drying"));
+            if (t == null) {
+                throw new IllegalStateException("farm_and_charm:drying RecipeType 未注册（目标 mod 版本不符？）");
+            }
             typeCache = t;
         }
         return t;
@@ -127,11 +130,15 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
             controller.tryAddItem(out);
         }
 
-        // 投 1 个鲜料（BE 每 200gt 自转化）
+        // 投 1 个鲜料（BE 每 200gt 自转化）；tryAddItem 返回 false=容量满（F-013）
         ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(recipe.getInput()), true);
         if (!take.isEmpty()) {
-            controller.tryAddItem(take);
-            maid.swing(InteractionHand.OFF_HAND);
+            if (controller.tryAddItem(take)) {
+                maid.swing(InteractionHand.OFF_HAND);
+            } else {
+                ItemUtils.getItemToLivingEntity(maid, take);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 筒仓已满，鲜料回包：{} @ {}", request.id, pos);
+            }
         }
     }
 

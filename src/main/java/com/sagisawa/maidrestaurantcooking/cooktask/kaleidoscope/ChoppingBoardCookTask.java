@@ -120,7 +120,8 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
         if (cut) {
             maid.swing(InteractionHand.OFF_HAND);
             if (board.getCurrentCutStack().isEmpty()) {
-                // 弹出路径：产物已落地（女仆拾取 AI 收集）
+                // F-012：产物以掉落实体落地，语义为"烹饪完成"，拾取由女仆常规拾取行为兜底（真机 sweep C1 专项验证）
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 菜板产物已落地待拾取：{} @ {}", request.id, pos);
                 request.remain--;
             }
         }

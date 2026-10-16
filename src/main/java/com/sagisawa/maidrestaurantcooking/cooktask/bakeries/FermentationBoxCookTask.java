@@ -129,7 +129,17 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
             }
         }
 
-        // 投料
+        // 投料（先探空槽再抽，F-002 防吞）
+        boolean hasEmpty = false;
+        for (int i = 0; i < box.getContainerSize(); i++) {
+            if (box.getItem(i).isEmpty()) {
+                hasEmpty = true;
+                break;
+            }
+        }
+        if (!hasEmpty) {
+            return;
+        }
         ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
         if (take.isEmpty()) {
             return;
@@ -142,5 +152,7 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
                 return;
             }
         }
+        ItemUtils.getItemToLivingEntity(maid, take);
+        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] fermentation_box 满槽放料失败，原料已回包：{}", request.id);
     }
 }

@@ -133,13 +133,19 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
             }
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
             if (!take.isEmpty()) {
+                boolean putIn = false;
                 for (int i = 0; i < OUTPUT_SLOT; i++) {
                     if (bowl.getItem(i).isEmpty()) {
                         bowl.setItem(i, take);
                         bowl.setChanged();
+                        putIn = true;
                         supplied = true;
                         break;
                     }
+                }
+                if (!putIn) {
+                    ItemUtils.getItemToLivingEntity(maid, take);
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] crafting_bowl 满槽放料失败，原料已回包：{}", request.id);
                 }
             }
         }

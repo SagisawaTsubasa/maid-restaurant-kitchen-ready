@@ -126,13 +126,19 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
             }
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
             if (!take.isEmpty()) {
+                boolean putIn = false;
                 for (int i = 1; i < bar.getContainerSize(); i++) {
                     if (bar.getItem(i).isEmpty()) {
                         bar.setItem(i, take);
                         bar.setChanged();
+                        putIn = true;
                         maid.swing(InteractionHand.OFF_HAND);
                         break;
                     }
+                }
+                if (!putIn) {
+                    ItemUtils.getItemToLivingEntity(maid, take);
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] palm_bar 满槽放料失败，原料已回包：{}", request.id);
                 }
             }
         }
