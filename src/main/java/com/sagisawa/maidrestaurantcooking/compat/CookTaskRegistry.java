@@ -3,8 +3,17 @@ package com.sagisawa.maidrestaurantcooking.compat;
 import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.utils.CookTasks;
 import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.cooktask.bakeries.FermentationBoxCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.ChinesefoodFreezerCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.PickleJarCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.SiloCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexStockpotCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.herbalbrews.TeaKettleCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.BambooTrayCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.TeapotCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.worldliquor.WorldliquorFreezerCookTask;
 
 /**
  * 批量注册器（M1 公共件）：对本体注册口的唯一入口。
@@ -32,6 +41,32 @@ public final class CookTaskRegistry {
         if (CompatMods.KALEIDOSCOPE_COOKERY) {
             registerTask(new FlexPotCookTask());
             registerTask(new FlexStockpotCookTask());
+            // M2 森罗余量：竹匾（自环境计时）、茶壶（注液+补放闭环）
+            registerTask(new BambooTrayCookTask());
+            registerTask(new TeapotCookTask());
+        }
+
+        // M2 定时容器族（ModList 门控，optional AFTER）
+        if (CompatMods.KALEIDOSCOPE_CHINESEFOOD) {
+            registerTask(new PickleJarCookTask());
+            registerTask(new ChinesefoodFreezerCookTask.Freezing());
+            registerTask(new ChinesefoodFreezerCookTask.Refrigerating());
+        }
+        if (CompatMods.FLAVOR_IMMERSED_DAILY) {
+            registerTask(new FidFridgeCookTask.Freezing());
+            registerTask(new FidFridgeCookTask.Tempering());
+        }
+        if (CompatMods.FARM_AND_CHARM) {
+            registerTask(new SiloCookTask());
+        }
+        if (CompatMods.BAKERIES) {
+            registerTask(new FermentationBoxCookTask());
+        }
+        if (CompatMods.KALEIDOSCOPE_WORLD_LIQUOR) {
+            registerTask(new WorldliquorFreezerCookTask());
+        }
+        if (CompatMods.HERBALBREWS) {
+            registerTask(new TeaKettleCookTask());
         }
 
         MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 构造期入队完成（门控分流后）");
