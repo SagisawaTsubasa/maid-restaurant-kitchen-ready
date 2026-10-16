@@ -155,41 +155,49 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             }
             IFluidHandlerItem cap = take.getCapability(Capabilities.FluidHandler.ITEM);
             if (cap == null) {
+                // 谓词已滤 fluid 容器，此处为防御：容器回包
+                ItemUtils.getItemToLivingEntity(maid, take);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液容器无 fluid capability，已回包：{}", request.id);
                 return;
             }
             FluidStack drained = cap.drain(need.copy(), IFluidHandler.FluidAction.EXECUTE);
-            if (!drained.isEmpty()) {
-                int accepted = freezer.tank.fill(drained, IFluidHandler.FluidAction.EXECUTE);
-                if (accepted < drained.getAmount()) {
-                    // 容器内剩余流体无处安放：剩余部分随容器留女仆包（drain 后容器自动回填空罐）
-                    ItemUtils.getItemToLivingEntity(maid, take);
-                }
-                maid.swing(InteractionHand.OFF_HAND);
+            // 所有分支统一回包（F-001）：drain 已就地改写容器，满载接受时空桶即正确产物，必须归还
+            ItemUtils.getItemToLivingEntity(maid, take);
+            if (drained.isEmpty()) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液 drain 未成，容器已回包：{}", request.id);
+                return;
             }
+            int accepted = freezer.tank.fill(drained, IFluidHandler.FluidAction.EXECUTE);
+            if (accepted < drained.getAmount()) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液被部分接受（{}/{}），多余流体随空罐作废：{}",
+                        accepted, drained.getAmount(), request.id);
+            }
+            maid.swing(InteractionHand.OFF_HAND);
             return;
         }
 
         // 投料：inputInventory.onContentsChanged 自动触发匹配+autoStart
         var ingredients = recipe.getIngredients();
-        boolean inserted = false;
         for (Ingredient ingredient : ingredients) {
             if (ingredient.isEmpty()) {
                 continue;
             }
             ItemStack material = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);
-            if (!material.isEmpty()) {
-                for (int i = 0; i < freezer.inputInventory.getSlots(); i++) {
-                    if (freezer.inputInventory.getStackInSlot(i).isEmpty()) {
-                        freezer.inputInventory.setStackInSlot(i, material);
-                        inserted = true;
-                        maid.swing(InteractionHand.OFF_HAND);
-                        break;
-                    }
+            if (material.isEmpty()) {
+                continue;
+            }
+            // F-003：按"本次是否放入"判定归还，不用跨配料复用的历史标志
+            boolean putIn = false;
+            for (int i = 0; i < freezer.inputInventory.getSlots(); i++) {
+                if (freezer.inputInventory.getStackInSlot(i).isEmpty()) {
+                    freezer.inputInventory.setStackInSlot(i, material);
+                    putIn = true;
+                    maid.swing(InteractionHand.OFF_HAND);
+                    break;
                 }
-                if (!inserted) {
-                    // 槽满放不下：还给女仆
-                    ItemUtils.getItemToLivingEntity(maid, material);
-                }
+            }
+            if (!putIn) {
+                ItemUtils.getItemToLivingEntity(maid, material);
             }
         }
     }

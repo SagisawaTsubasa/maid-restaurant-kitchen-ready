@@ -42,6 +42,14 @@ import com.sagisawa.maidrestaurantcooking.cooktask.worldliquor.WorldliquorFreeze
  * </ul>
  */
 public final class CookTaskRegistry {
+    /** 本包入队的任务清单（F-009 注册自检依据：冲刷后逐个反查 taskMap）。 */
+    private static final java.util.List<ICookTask> QUEUED = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** 本包已入队任务（只读视图）。 */
+    public static java.util.List<ICookTask> registered() {
+        return java.util.List.copyOf(QUEUED);
+    }
+
     private CookTaskRegistry() {
     }
 
@@ -121,6 +129,7 @@ public final class CookTaskRegistry {
      *  此处禁止调 task.getType()（森罗 ModRecipes 字段此刻为 null）；UID 由任务自身常量提供。 */
     public static void registerTask(ICookTask task) {
         CookTasks.register(task);
+        QUEUED.add(task);
         MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 入队：{}", task.getUID());
     }
 }

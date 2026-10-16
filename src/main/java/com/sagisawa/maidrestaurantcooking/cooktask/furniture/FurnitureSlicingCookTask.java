@@ -43,9 +43,13 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
 
     @Override
     protected RecipeType<?> recipeType() {
-        // 家具 RegistryEntry 依赖 Framework 库（不在编译类路径），走注册表键查
-        return net.minecraft.core.registries.BuiltInRegistries.RECIPE_TYPE.get(
+        // 家具 RegistryEntry 依赖 Framework 库（不在编译类路径），走注册表键查；空值守卫（F-007）
+        RecipeType<?> t = net.minecraft.core.registries.BuiltInRegistries.RECIPE_TYPE.get(
                 net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("refurbished_furniture", "cutting_board_slicing"));
+        if (t == null) {
+            throw new IllegalStateException("refurbished_furniture:cutting_board_slicing RecipeType 未注册（目标 mod 版本不符？）");
+        }
+        return t;
     }
 
     @Override
@@ -103,6 +107,8 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
             // 放上即切（一刀一片，产物落地）
             if (board.sliceItem(level, true)) {
                 maid.swing(InteractionHand.OFF_HAND);
+                // F-012：产物落地依赖女仆拾取 AI（真机 sweep C3 验证）
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板产物已落地待拾取：{} @ {}", request.id, pos);
                 request.remain--;
             }
         } else {

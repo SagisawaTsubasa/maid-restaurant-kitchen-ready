@@ -98,13 +98,15 @@ public class TeapotCookTask implements ICookTask {
         if (!placed.isEmpty()) {
             return placed.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get();
         }
-        // 补放位：热源正上方的空气位（茶壶 hasHeatSource 检查正下方），且女仆带茶壶物品
+        // 补放位：热源正上方的空气位（茶壶 hasHeatSource 检查正下方），且女仆带茶壶物品；
+        // 加占用过滤（F-015：全仓搜索谓词统一带 BlockUsage）
         if (findTeapotItem(maid).isEmpty()) {
             return null;
         }
         List<BlockPos> spots = SearchUtils.search(
                 center, horizontalSearchRange, verticalSearchRange,
                 pos -> isPlacementSpot(level, pos)
+                        && com.mastermarisa.maid_restaurant.utils.BlockUsageManager.getUserCount(pos) <= 0
         );
         return !spots.isEmpty() ? spots.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get() : null;
     }
@@ -124,11 +126,12 @@ public class TeapotCookTask implements ICookTask {
 
         // 补放位：放茶壶（下 tick 起成为常规 BE 目标）
         if (!(level.getBlockEntity(pos) instanceof TeapotBlockEntity teapot)) {
-            ItemStack teapotItem = findTeapotItem(maid);
+            // F-010：显式抽取 1 个再放置，杜绝对背包原栈引用的隐式扣减歧义
+            ItemStack teapotItem = extractTeapotItem(maid);
             if (teapotItem.isEmpty()) {
                 return;
             }
-            placeTeapot(level, pos, teapotItem);
+            placeTeapot(level, pos, teapotItem, maid);
             return;
         }
 
@@ -202,12 +205,27 @@ public class TeapotCookTask implements ICookTask {
         return ItemStack.EMPTY;
     }
 
+    private static boolean isTeapotItem(ItemStack stack) {
+        return stack.getItem() instanceof BlockItem blockItem
+                && blockItem.getBlock() instanceof com.github.ysbbbbbb.kaleidoscopecookery.block.kitchen.TeapotBlock;
+    }
+
     private static ItemStack findTeapotItem(EntityMaid maid) {
         var inv = maid.getAvailableInv(false);
         for (int i = 0; i < inv.getSlots(); i++) {
-            ItemStack stack = inv.getStackInSlot(i);
-            if (stack.getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof com.github.ysbbbbbb.kaleidoscopecookery.block.kitchen.TeapotBlock) {
-                return stack;
+            if (isTeapotItem(inv.getStackInSlot(i))) {
+                return inv.getStackInSlot(i);
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    /** 抽取式：从女仆背包取出 1 个茶壶物品（放置消耗即该栈本体，无引用歧义）。 */
+    private static ItemStack extractTeapotItem(EntityMaid maid) {
+        var inv = maid.getAvailableInv(false);
+        for (int i = 0; i < inv.getSlots(); i++) {
+            if (isTeapotItem(inv.getStackInSlot(i))) {
+                return inv.extractItem(i, 1, false);
             }
         }
         return ItemStack.EMPTY;
@@ -225,8 +243,11 @@ public class TeapotCookTask implements ICookTask {
         return below.is(com.github.ysbbbbbb.kaleidoscopecookery.init.tag.TagMod.HEAT_SOURCE_BLOCKS_WITHOUT_LIT);
     }
 
-    private static void placeTeapot(ServerLevel level, BlockPos pos, ItemStack teapotItem) {
+    private static void placeTeapot(ServerLevel level, BlockPos pos, ItemStack teapotItem, EntityMaid maid) {
         if (!(teapotItem.getItem() instanceof BlockItem blockItem)) {
+            // 抽取前已验茶壶 BlockItem，此处纯防御：回包防吞
+            com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, teapotItem);
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶放置防御分支触发，物品已回包 @ {}", pos);
             return;
         }
         var fakePlayer = FakePlayerUtils.getPlayer(level);

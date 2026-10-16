@@ -76,7 +76,9 @@ public class FlexPotCookTask extends PotCookTask {
 
     @Override
     public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
-        PotBlockEntity pot = Objects.requireNonNull((PotBlockEntity) level.getBlockEntity(pos));
+        if (!(level.getBlockEntity(pos) instanceof PotBlockEntity pot)) {
+            return;
+        }
         switch (pot.getStatus()) {
             case 0:
                 this.tickState0(level, maid, pos, pot, request);

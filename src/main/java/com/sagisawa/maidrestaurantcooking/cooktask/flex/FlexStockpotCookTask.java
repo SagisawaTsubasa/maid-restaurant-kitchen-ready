@@ -91,7 +91,10 @@ public class FlexStockpotCookTask extends StockpotCookTask {
                         return;
                     }
                     recipe.getIngredients().stream().filter(i -> i.getItems().length > 0).forEach(s -> ans.add(s.getItems()[0]));
-                    ans.add(recipe.carrier().getItems()[0].copyWithCount(recipe.result().getCount() - pot.getTakeoutCount()));
+                    // F-011：空 carrier 的 getItems() 为空数组，直接取 [0] 越界
+                    if (recipe.carrier().getItems().length > 0 && recipe.result().getCount() - pot.getTakeoutCount() > 0) {
+                        ans.add(recipe.carrier().getItems()[0].copyWithCount(recipe.result().getCount() - pot.getTakeoutCount()));
+                    }
                     ans.add(SoupBaseManager.getSoupBase(recipe.soupBase()).getDisplayStack());
                 });
             }
@@ -102,7 +105,9 @@ public class FlexStockpotCookTask extends StockpotCookTask {
 
     @Override
     public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
-        StockpotBlockEntity pot = Objects.requireNonNull((StockpotBlockEntity) level.getBlockEntity(pos));
+        if (!(level.getBlockEntity(pos) instanceof StockpotBlockEntity pot)) {
+            return;
+        }
         switch (pot.getStatus()) {
             case 0:
                 this.tickState0(level, maid, pos, pot, request);

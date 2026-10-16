@@ -21,6 +21,7 @@ import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 
@@ -81,7 +82,9 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             Class<? extends AbstractFurnaceBlockEntity> clazz = vanillaFurnaceClass();
             beCheck = pos -> clazz.isInstance(level.getBlockEntity(pos));
         } else {
-            beCheck = pos -> target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()));
+            // F-004：路由目标必须同时是可驱动的炉 BE，否则女仆站定空转
+            beCheck = pos -> target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()))
+                    && level.getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity;
         }
         List<BlockPos> found = SearchUtils.search(
                 center, horizontalSearchRange, verticalSearchRange,
@@ -96,7 +99,9 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         if (target == null) {
             return vanillaFurnaceClass().isInstance(level.getBlockEntity(pos));
         }
-        return target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()));
+        // F-004：路由目标需方块 id 命中且 BE 可驱动
+        return target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()))
+                && level.getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity;
     }
 
     @Override
@@ -134,29 +139,40 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             return;
         }
 
-        // 已有匹配输入在炉内 → 等待（顺手补燃料）
+        // 已有输入在炉内：匹配则等待，不匹配（异物）落 WARN（F-005：防永久静默等待）
         ItemStack input = furnace.getItem(0);
-        if (input.isEmpty()) {
-            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
-                    StackPredicate.of(s -> recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(s))), true);
-            if (!take.isEmpty()) {
-                furnace.setItem(0, take);
-                furnace.setChanged();
-                maid.swing(InteractionHand.OFF_HAND);
-            }
+        if (!input.isEmpty()) {
+            boolean matches = recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(input));
+            if (!matches) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉内存在非本单输入，请求可能无法完成：{} @ {}（炉内 {}）", request.id, pos, input.getItem());}
             return;
         }
 
-        // 补燃料：炉未点燃且燃料槽空
-        if (!level.getBlockState(pos).getValue(AbstractFurnaceBlock.LIT) && furnace.getItem(1).isEmpty()) {
+        ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
+                StackPredicate.of(s -> recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(s))), true);
+        if (!take.isEmpty()) {
+            furnace.setItem(0, take);
+            furnace.setChanged();
+            maid.swing(InteractionHand.OFF_HAND);
+            return;
+        }
+
+        // 补燃料：炉未点燃且燃料槽空（LIT 读取前守卫方块类型，F-004 防 IAE）
+        BlockState furnaceState = level.getBlockState(pos);
+        boolean lit = furnaceState.getBlock() instanceof AbstractFurnaceBlock
+                && furnaceState.getValue(AbstractFurnaceBlock.LIT);
+        if (!lit) {
+            ItemStack outputCheck = furnace.getItem(2);
+            if (!outputCheck.isEmpty() && outputCheck.getItem() != expectResult.getItem()) {
+                // F-005：输出槽被异物占据，产物取不走且燃料白烧
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉输出槽被非本单产物占据：{} @ {}", request.id, pos);return;
+            }
             ItemStack fuel = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
                     StackPredicate.of(AbstractFurnaceBlockEntity::isFuel), true);
             if (!fuel.isEmpty()) {
                 furnace.setItem(1, fuel);
                 furnace.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
-            } else if (!furnace.getItem(1).isEmpty()) {
-                return;
             }
         }
     }

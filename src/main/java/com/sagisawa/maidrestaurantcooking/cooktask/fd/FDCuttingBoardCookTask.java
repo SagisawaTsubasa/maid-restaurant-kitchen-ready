@@ -115,8 +115,14 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
             Ingredient input = ingredients.isEmpty() ? Ingredient.EMPTY : ingredients.getFirst();
             ItemStack take = input.isEmpty() ? ItemStack.EMPTY
                     : ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(input), true);
-            if (!take.isEmpty() && board.addItem(take).isEmpty()) {
-                maid.swing(InteractionHand.OFF_HAND);
+            if (!take.isEmpty()) {
+                ItemStack remain = board.addItem(take);
+                if (!remain.isEmpty()) {
+                    // F-013：addItem 返回未接纳部分——退回女仆包
+                    ItemUtils.getItemToLivingEntity(maid, remain);
+                } else {
+                    maid.swing(InteractionHand.OFF_HAND);
+                }
             }
             return;
         }
@@ -133,6 +139,8 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
         }
         if (processed) {
             maid.swing(InteractionHand.OFF_HAND);
+            // F-012：产物落地依赖女仆拾取 AI（真机 sweep C2 验证）
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] FD 砧板产物已落地待拾取：{} @ {}", request.id, pos);
             request.remain--;
         }
     }
