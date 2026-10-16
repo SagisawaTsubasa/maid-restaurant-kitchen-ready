@@ -51,11 +51,19 @@ public class MaidRestaurantCooking {
         event.enqueueWork(() -> {
             int mine = 0;
             for (var task : com.sagisawa.maidrestaurantcooking.compat.CookTaskRegistry.registered()) {
-                mine++;
-                var found = com.mastermarisa.maid_restaurant.utils.CookTasks.getTask(task.getType());
-                if (found == null) {
-                    LOGGER.error("[xia-de-chu-fang] 注册自检失败：任务 {}（type={}）未进入本体 taskMap——同键后到覆盖或冲刷异常！",
-                            task.getUID(), task.getType());
+                try {
+                    mine++;
+                    var found = com.mastermarisa.maid_restaurant.utils.CookTasks.getTask(task.getType());
+                    if (found == null) {
+                        LOGGER.error("[xia-de-chu-fang] 注册自检失败：任务 {}（type={}）未进入本体 taskMap——同键后到覆盖或冲刷异常！",
+                                task.getUID(), task.getType());
+                    } else if (found != task) {
+                        // F-106：身份比对——同键被其他实例覆盖（他包/本体同 UID 任务）时亮出来
+                        LOGGER.warn("[xia-de-chu-fang] 注册自检：type {} 上实际生效 {}（本包 {} 被覆盖或为同 UID 任务）",
+                                task.getType(), found.getUID(), task.getUID());
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("[xia-de-chu-fang] 注册自检异常（任务 {}）：{}", task.getUID(), e.toString());
                 }
             }
             LOGGER.info("[xia-de-chu-fang] 注册自检：本包任务 {} 个已冲刷核对", mine);

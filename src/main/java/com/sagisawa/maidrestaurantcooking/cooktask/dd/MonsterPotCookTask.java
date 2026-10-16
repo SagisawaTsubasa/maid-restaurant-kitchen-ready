@@ -117,8 +117,11 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
             return;
         }
 
-        // 餐成 → 取碗上菜
+        // 餐成 → 取碗上菜（F-109：核对归属，非本单餐品不取防错单）
         ItemStack meal = pot.getMeal();
+        if (!meal.isEmpty() && meal.getItem() != recipe.getResultItem(level.registryAccess()).getItem()) {
+            return;
+        }
         if (!meal.isEmpty()) {
             ItemStack container = recipe.getOutputContainer();
             // F-021：容器谓词原样交给 BE 校验（useHeldItemOnMeal→isContainerValid）；无容器配方不打空碗

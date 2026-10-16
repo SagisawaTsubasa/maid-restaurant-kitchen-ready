@@ -126,8 +126,11 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
                 request.remain--;
                 return;
             }
-            // 非本配方产物（其他来源残留）：放回不做，避免吞货
-            controller.tryAddItem(out);
+            // 非本配方产物（其他来源残留）：回塞；F-103 容量满时回包防吞
+            if (!controller.tryAddItem(out)) {
+                ItemUtils.getItemToLivingEntity(maid, out);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 筒仓残留产物回塞失败（容量满），已回包：{} @ {}", out.getItem(), pos);
+            }
         }
 
         // 投 1 个鲜料（BE 每 200gt 自转化）；tryAddItem 返回 false=容量满（F-013）

@@ -127,8 +127,11 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             return;
         }
 
-        // 输出槽有货 → 取走
+        // 输出槽有货 → 取走（F-109：核对归属，非本单成品不取防错单）
         ItemStack output = freezer.outputInventory.getStackInSlot(0);
+        if (!output.isEmpty() && output.getItem() != recipe.getResultItem().getItem()) {
+            return;
+        }
         if (!output.isEmpty()) {
             ItemStack taken = freezer.outputInventory.extractItem(0, output.getCount(), false);
             if (!taken.isEmpty()) {
@@ -158,6 +161,13 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
                 // 谓词已滤 fluid 容器，此处为防御：容器回包
                 ItemUtils.getItemToLivingEntity(maid, take);
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液容器无 fluid capability，已回包：{}", request.id);
+                return;
+            }
+            // F-105：SIMULATE 预检——罐内已有异液时 tank.fill 会拒收，避免每 tick 白抽一罐
+            int preview = freezer.tank.fill(need.copy(), IFluidHandler.FluidAction.SIMULATE);
+            if (preview < need.getAmount()) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer SIMULATE {}/{} 罐内异液或容量不足，跳过注液：{}", preview, need.getAmount(), request.id);
+                ItemUtils.getItemToLivingEntity(maid, take);
                 return;
             }
             FluidStack drained = cap.drain(need.copy(), IFluidHandler.FluidAction.EXECUTE);

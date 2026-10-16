@@ -123,8 +123,11 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
             return;
         }
 
-        // 出品 → 取走
+        // 出品 → 取走（F-109：核对归属，非本单成品不取防错单）
         ItemStack output = kettle.getItem(SLOT_OUTPUT);
+        if (!output.isEmpty() && output.getItem() != recipe.getResultItem(level.registryAccess()).getItem()) {
+            return;
+        }
         if (!output.isEmpty()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());
             kettle.removeItem(SLOT_OUTPUT, output.getCount());

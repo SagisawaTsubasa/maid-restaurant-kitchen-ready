@@ -157,11 +157,12 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             return;
         }
 
-        // 补燃料：炉未点燃且燃料槽空（LIT 读取前守卫方块类型，F-004 防 IAE）
+        // 补燃料：炉未点燃且燃料槽为空（F-101：必须先验槽 1 空，防覆盖销毁既有燃料栈；
+        // LIT 读取前守卫方块类型，F-004 防 IAE）
         BlockState furnaceState = level.getBlockState(pos);
         boolean lit = furnaceState.getBlock() instanceof AbstractFurnaceBlock
                 && furnaceState.getValue(AbstractFurnaceBlock.LIT);
-        if (!lit) {
+        if (!lit && furnace.getItem(1).isEmpty()) {
             ItemStack outputCheck = furnace.getItem(2);
             if (!outputCheck.isEmpty() && outputCheck.getItem() != expectResult.getItem()) {
                 // F-005：输出槽被异物占据，产物取不走且燃料白烧

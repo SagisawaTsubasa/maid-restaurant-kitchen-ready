@@ -24,9 +24,10 @@ public final class Config {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> EXCLUDED_RECIPE_PREFIXES;
 
     /**
-     * 炉式路由映射（M3 启用）：每行 "源RecipeType键=目标工作方块id"，
-     * 例如 "minecraft:smelting=kaleidoscope_cookery:rotisserie"（示例占位，M3 实证后改默认值）。
-     * 炉式三类的女仆烹饪不走原熔炉，由映射表路由到在场烤/熏方块。
+     * 炉式路由映射（M3 启用）：每行 "源RecipeType键=目标工作方块id"。
+     * 留空 = 路由到原版炉（熔炉/烟熏炉/高炉，默认行为）。
+     * 注意（F-110）：路由目标必须是带炉类 BlockEntity（AbstractFurnaceBlockEntity 子类）的方块，
+     * 否则搜索守卫（F-004）会跳过该目标并回落——配置非炉类方块不会生效。
      */
     public static final ModConfigSpec.ConfigValue<List<? extends String>> FURNACE_ROUTING_RULES;
 
