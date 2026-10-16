@@ -6,7 +6,11 @@ import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
 import com.sagisawa.maidrestaurantcooking.cooktask.bakeries.FermentationBoxCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.ChinesefoodFreezerCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.PickleJarCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.CraftingBowlCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.FarmcharmHeatedCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.MincerCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.SiloCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.StoveCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.furnace.FurnaceRoutingCookTasks;
@@ -59,6 +63,11 @@ public final class CookTaskRegistry {
         }
         if (CompatMods.FARM_AND_CHARM) {
             registerTask(new SiloCookTask());
+            registerTask(new MincerCookTask());
+            registerTask(new StoveCookTask());
+            registerTask(new FarmcharmHeatedCookTask.CookingPot());
+            registerTask(new FarmcharmHeatedCookTask.Roaster());
+            registerTask(new CraftingBowlCookTask());
         }
         if (CompatMods.BAKERIES) {
             registerTask(new FermentationBoxCookTask());
