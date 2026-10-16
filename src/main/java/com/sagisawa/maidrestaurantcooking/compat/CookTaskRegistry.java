@@ -9,6 +9,7 @@ import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.PickleJarCookTask
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.SiloCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.furnace.FurnaceRoutingCookTasks;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexStockpotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.herbalbrews.TeaKettleCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.BambooTrayCookTask;
@@ -68,6 +69,11 @@ public final class CookTaskRegistry {
         if (CompatMods.HERBALBREWS) {
             registerTask(new TeaKettleCookTask());
         }
+
+        // M3 炉式三实类（原版类型，无门控；路由表默认原版炉，config 可路由 modded 方块）
+        registerTask(new FurnaceRoutingCookTasks.Smelting());
+        registerTask(new FurnaceRoutingCookTasks.Smoking());
+        registerTask(new FurnaceRoutingCookTasks.Blasting());
 
         MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 构造期入队完成（门控分流后）");
     }
