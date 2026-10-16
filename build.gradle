@@ -1,0 +1,76 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.147'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+// 编译期依赖：女仆餐厅本体 0.2.9 + 森罗厨房 1.6.0（本体硬依赖链）+ 目标 mod jar 全集。
+// 运行期由客户端 mods/ 提供，一律不打包。收集脚本 scripts/collect-libs.ps1，清单 docs/libs-manifest.md。
+// exclude：创建宇航学（rocketnautics）jar 携带 META-INF/services/com.sun.source.util.Plugin
+// 指向缺失类的 shaded service，javac 启动扫描 classpath 即炸（fork/processor-path 均绕不开，
+// 实测最小复现）；其 8 条配方全是原版烧炼/高炉类型（M3 数据驱动路由），无需编译期类型。
+dependencies {
+    compileOnly fileTree(dir: 'libs', include: '*.jar', exclude: '创建宇航学*')
+}
+
+// libs 里其余 jar 若再出现同类杂散 service，同样在此 exclude。
+// processor path 显式清空 + fork：本包零 APT，缩短编译面。
+tasks.withType(JavaCompile).configureEach {
+    options.annotationProcessorPath = files()
+    options.fork = true
+}
+
+// neoforge.mods.toml 模板展开（MDK 标准件）：src/main/templates 里的 ${} 占位符
+// 用 gradle.properties 的同名属性替换，产物作为资源目录参与打包。
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version    : minecraft_version,
+            neo_version          : neo_version,
+            loader_version_range : loader_version_range,
+            mod_id               : mod_id,
+            mod_license          : mod_license,
+            mod_version          : mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
