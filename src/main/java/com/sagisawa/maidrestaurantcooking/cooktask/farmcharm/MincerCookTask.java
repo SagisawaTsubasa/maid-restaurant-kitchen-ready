@@ -1,0 +1,126 @@
+package com.sagisawa.maidrestaurantcooking.cooktask.farmcharm;
+
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.mastermarisa.maid_restaurant.request.CookRequest;
+import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
+import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
+import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.cooktask.timed.AbstractTimedContainerCookTask;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.satisfy.farm_and_charm.core.block.MincerBlock;
+import net.satisfy.farm_and_charm.core.block.entity.MincerBlockEntity;
+import net.satisfy.farm_and_charm.core.recipe.MincerRecipe;
+import net.satisfy.farm_and_charm.core.registry.RecipeTypeRegistry;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.function.Predicate;
+
+/**
+ * 沉浸农艺「绞肉机」（farm_and_charm:mincer，59 条）的女仆烹饪任务。
+ *
+ * <p>实证：手摇驱动——BE tick 依 CRANK 方块属性自减，cranked 计满 20 转化 1 输入；
+ * 女仆复制摇柄：投料（slot0，CRANK==0 时）→ 每 tick 给 CRANK 补 8 → 输出 slot1 取走。
+ * 刀盘分 recipe_type 字符串（MincerRecipe.getRecipeType），全部并入本任务。
+ */
+public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe> {
+
+    @Override
+    public String getUID() {
+        return "MincerCookTask";
+    }
+
+    @Override
+    public ItemStack getIcon() {
+        return new ItemStack(net.minecraft.world.level.block.Blocks.GRINDSTONE);
+    }
+
+    @Override
+    protected RecipeType<?> recipeType() {
+        return RecipeTypeRegistry.MINCER_RECIPE_TYPE.get();
+    }
+
+    @Override
+    protected Class<MincerRecipe> recipeClass() {
+        return MincerRecipe.class;
+    }
+
+    @Override
+    protected ItemStack recipeResult(MincerRecipe recipe, Level level) {
+        return recipe.getResultItem(level.registryAccess());
+    }
+
+    @Override
+    protected Predicate<BlockPos> workBlockFilter(ServerLevel level) {
+        return pos -> level.getBlockEntity(pos) instanceof MincerBlockEntity;
+    }
+
+    @Override
+    public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
+        MincerRecipe recipe = (MincerRecipe) recipeHolder.value();
+        return List.of(StackPredicate.of(recipe.getInput()));
+    }
+
+    @Override
+    public List<ItemStack> getCurrentInput(Level level, BlockPos pos, EntityMaid maid) {
+        List<ItemStack> ans = new java.util.ArrayList<>();
+        if (level.getBlockEntity(pos) instanceof MincerBlockEntity mincer && !mincer.getItem(0).isEmpty()) {
+            ans.add(mincer.getItem(0).copy());
+        }
+        return ans;
+    }
+
+    @Override
+    public boolean isValidWorkBlock(ServerLevel level, EntityMaid maid, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof MincerBlockEntity;
+    }
+
+    @Override
+    public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
+        MincerBlockEntity mincer = level.getBlockEntity(pos) instanceof MincerBlockEntity m ? m : null;
+        if (mincer == null) {
+            return;
+        }
+        MincerRecipe recipe = resolveRecipe(level, request);
+        if (recipe == null) {
+            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] mincer 请求配方缺失或类型不符：{}", request.id);
+            return;
+        }
+
+        // 输出槽取货
+        ItemStack output = mincer.getItem(1);
+        if (!output.isEmpty() && output.getItem() == recipe.getResultItem(level.registryAccess()).getItem()) {
+            ItemUtils.getItemToLivingEntity(maid, output.copy());
+            mincer.removeItem(1, output.getCount());
+            mincer.setChanged();
+            maid.swing(InteractionHand.OFF_HAND);
+            request.remain--;
+            return;
+        }
+
+        BlockState state = level.getBlockState(pos);
+        // 投料（摇柄静止时）
+        if (state.getValue(MincerBlock.CRANK) == 0 && mincer.getItem(0).isEmpty()) {
+            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(recipe.getInput()), true);
+            if (!take.isEmpty()) {
+                mincer.setItem(0, take);
+                mincer.setChanged();
+                maid.swing(InteractionHand.OFF_HAND);
+            }
+            return;
+        }
+        // 摇柄：CRANK 有余量即自动转；静止且输入在位则补摇
+        if (state.getValue(MincerBlock.CRANK) == 0 && !mincer.getItem(0).isEmpty()) {
+            level.setBlock(pos, state.setValue(MincerBlock.CRANK, 8), 3);
+        }
+    }
+}
