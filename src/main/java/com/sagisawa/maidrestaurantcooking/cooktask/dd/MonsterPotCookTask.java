@@ -120,6 +120,8 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
         // 餐成 → 取碗上菜（F-109：核对归属，非本单餐品不取防错单）
         ItemStack meal = pot.getMeal();
         if (!meal.isEmpty() && meal.getItem() != recipe.getResultItem(level.registryAccess()).getItem()) {
+            // F-111：异物产出静默停摆 → 响出
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅内为非本单餐品（{}），请求停摆待人工处理：{} @ {}", meal.getItem(), request.id, pos);
             return;
         }
         if (!meal.isEmpty()) {

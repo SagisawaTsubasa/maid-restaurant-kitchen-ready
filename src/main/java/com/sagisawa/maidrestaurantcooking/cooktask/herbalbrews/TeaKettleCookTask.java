@@ -126,6 +126,8 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
         // 出品 → 取走（F-109：核对归属，非本单成品不取防错单）
         ItemStack output = kettle.getItem(SLOT_OUTPUT);
         if (!output.isEmpty() && output.getItem() != recipe.getResultItem(level.registryAccess()).getItem()) {
+            // F-111：异物产出静默停摆 → 响出
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 煮茶壶槽 0 为非本单产物（{}），请求停摆待人工处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty()) {

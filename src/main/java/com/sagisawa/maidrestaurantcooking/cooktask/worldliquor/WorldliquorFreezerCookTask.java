@@ -130,6 +130,8 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
         // 输出槽有货 → 取走（F-109：核对归属，非本单成品不取防错单）
         ItemStack output = freezer.outputInventory.getStackInSlot(0);
         if (!output.isEmpty() && output.getItem() != recipe.getResultItem().getItem()) {
+            // F-111：异物产出静默停摆 → 响出
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰柜输出槽为非本单产物（{}），请求停摆待人工处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty()) {
@@ -163,9 +165,10 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液容器无 fluid capability，已回包：{}", request.id);
                 return;
             }
-            // F-105：SIMULATE 预检——罐内已有异液时 tank.fill 会拒收，避免每 tick 白抽一罐
+            // F-105：SIMULATE 预检——罐完全不容（preview=0，异液占罐）时才跳过；
+            // 部分可容场景放行（剩余作废由后续 partial WARN 兜底，F-114 放宽避免封死部分注入）
             int preview = freezer.tank.fill(need.copy(), IFluidHandler.FluidAction.SIMULATE);
-            if (preview < need.getAmount()) {
+            if (preview <= 0) {
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer SIMULATE {}/{} 罐内异液或容量不足，跳过注液：{}", preview, need.getAmount(), request.id);
                 ItemUtils.getItemToLivingEntity(maid, take);
                 return;
@@ -187,9 +190,20 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
         }
 
         // 投料：inputInventory.onContentsChanged 自动触发匹配+autoStart
+        // F-119：先核槽内是否已有同料，防重复塞料致槽满死锁
         var ingredients = recipe.getIngredients();
         for (Ingredient ingredient : ingredients) {
             if (ingredient.isEmpty()) {
+                continue;
+            }
+            boolean present = false;
+            for (int i = 0; i < freezer.inputInventory.getSlots(); i++) {
+                if (ingredient.test(freezer.inputInventory.getStackInSlot(i))) {
+                    present = true;
+                    break;
+                }
+            }
+            if (present) {
                 continue;
             }
             ItemStack material = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(ingredient), true);

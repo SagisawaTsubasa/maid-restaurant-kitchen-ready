@@ -162,6 +162,11 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         BlockState furnaceState = level.getBlockState(pos);
         boolean lit = furnaceState.getBlock() instanceof AbstractFurnaceBlock
                 && furnaceState.getValue(AbstractFurnaceBlock.LIT);
+        if (!lit && !furnace.getItem(1).isEmpty() && !AbstractFurnaceBlockEntity.isFuel(furnace.getItem(1))) {
+            // F-115：燃料槽被非燃料异物占据，本单燃料进不去——对称 F-005 响出
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉燃料槽为非燃料异物（{}）：{} @ {}", furnace.getItem(1).getItem(), request.id, pos);
+            return;
+        }
         if (!lit && furnace.getItem(1).isEmpty()) {
             ItemStack outputCheck = furnace.getItem(2);
             if (!outputCheck.isEmpty() && outputCheck.getItem() != expectResult.getItem()) {

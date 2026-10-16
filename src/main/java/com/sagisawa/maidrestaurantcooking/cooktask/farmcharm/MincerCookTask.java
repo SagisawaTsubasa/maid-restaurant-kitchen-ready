@@ -120,7 +120,12 @@ public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe>
             return;
         }
         // 摇柄：CRANK 有余量即自动转；静止且输入在位则补摇
+        // F-112：槽内物料非本单输入时不动摇柄（防摇异物耗材堵槽）
         if (state.getValue(MincerBlock.CRANK) == 0 && !mincer.getItem(0).isEmpty()) {
+            if (!recipe.getInput().test(mincer.getItem(0))) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 绞肉机槽内为非本单物料（{}），不动摇柄：{} @ {}", mincer.getItem(0).getItem(), request.id, pos);
+                return;
+            }
             level.setBlock(pos, state.setValue(MincerBlock.CRANK, 8), 3);
         }
     }
