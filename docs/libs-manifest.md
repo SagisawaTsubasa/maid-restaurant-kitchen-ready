@@ -1,6 +1,6 @@
 ﻿# libs-manifest
 
-Generated: 2026-10-17 03:09  |  TSV unique: 67  |  OK: 66  |  FAILED/SKIP: 1
+Generated: 2026-10-17 03:34  |  TSV unique: 67  |  OK: 67  |  FAILED/SKIP: 1
 
 Compile-only (compileOnly fileTree(libs)), never packaged; runtime comes from the client mods dir.
 
@@ -73,3 +73,4 @@ Compile-only (compileOnly fileTree(libs)), never packaged; runtime comes from th
 | 烟火凡人心flavor_immersed_daily-1.21.1-neoforge-2026.10.2.jar | 烟火凡人心flavor_immersed_daily-1.21.1-neoforge-2026.10.2.jar | flavor_immersed_daily | OK |
 | 饮酒作乐BrewinAndChewin-neoforge-4.5.0+1.21.1.jar | 饮酒作乐BrewinAndChewin-neoforge-4.5.0+1.21.1.jar | brewinandchewin | OK |
 | 灾变乐事lendersdelight-1.21.1-1.0.10b.jar | 灾变乐事lendersdelight-1.21.1-1.0.10b.jar | lendersdelight | OK |
+| (extras) hard dep chain | touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar | touhou_little_maid | OK |

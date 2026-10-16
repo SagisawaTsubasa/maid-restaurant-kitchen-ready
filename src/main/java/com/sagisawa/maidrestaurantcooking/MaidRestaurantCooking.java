@@ -2,6 +2,7 @@ package com.sagisawa.maidrestaurantcooking;
 
 import com.mojang.logging.LogUtils;
 import com.sagisawa.maidrestaurantcooking.compat.CompatMods;
+import com.sagisawa.maidrestaurantcooking.compat.CookTaskRegistry;
 import com.sagisawa.maidrestaurantcooking.config.Config;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -25,11 +26,15 @@ public class MaidRestaurantCooking {
     public MaidRestaurantCooking(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
-        // 门控常量集在本体 commonSetup 冲刷前必须定案：构造期求值，M1 起各任务注册按此分流
+        // 门控常量集在本体 commonSetup 冲刷前必须定案：构造期求值，各任务注册按此分流
         CompatMods.logGates();
 
+        // 批量注册（M1）：构造期把任务入本体暂存队列，本体 FMLCommonSetup 冲刷入 taskMap。
+        // 顺序约束：必须在本体冲刷前（构造期即安全）；此处不可调 task.getType()（注册表未填充）。
+        CookTaskRegistry.registerAll();
+
         modEventBus.addListener(this::commonSetup);
-        LOGGER.info("[xia-de-chu-fang] 女仆餐厅：下得厨房已加载（v{}），CookTask 注册口就绪", modContainer.getModInfo().getVersion());
+        LOGGER.info("[xia-de-chu-fang] 女仆餐厅：下得厨房已加载（v{}）", modContainer.getModInfo().getVersion());
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

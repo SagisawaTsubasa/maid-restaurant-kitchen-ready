@@ -98,6 +98,22 @@ foreach ($src in $uniqueSources) {
     }
 }
 
+# --- extras: compile-time deps not present in the TSV source-jar column ---
+# touhoulittlemaid: EntityMaid appears in ICookTask/cooktask signatures (hard dep chain of the base mod)
+$extras = @("touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar")
+foreach ($name in $extras) {
+    $src = Join-Path $ModsDir $name
+    if (Test-Path $src) {
+        [System.IO.File]::Copy($src, (Join-Path $libsDir $name), $true)
+        $rows.Add([pscustomobject]@{ Source = "(extras) hard dep chain"; Jar = $name; ModId = (Get-ModId $src); Status = "OK" })
+        Write-Host ("OK  (extras) " + $name)
+    } else {
+        $failCount++
+        $rows.Add([pscustomobject]@{ Source = "(extras) hard dep chain"; Jar = $name; ModId = "-"; Status = "MISSING" })
+        Write-Warning ("MISSING extra: " + $name)
+    }
+}
+
 # --- manifest ---
 $ok = @($rows | Where-Object { $_.Status -eq "OK" })
 $md = New-Object System.Text.StringBuilder
