@@ -1,0 +1,23 @@
+# gradle
+.gradle/
+build/
+
+# dev 运行时
+run/
+run-server/
+run-staging/
+
+# 编译期依赖 jar 本地副本（scripts/collect-libs.ps1 从客户端 mods 收集，见 docs/libs-manifest.md）
+libs/
+
+# ide
+.idea/
+.vscode/
+*.iml
+.eclipse/
+.classpath
+.project
+.settings/
+
+# 会话
+.zcode/
