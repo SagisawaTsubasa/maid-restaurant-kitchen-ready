@@ -4,6 +4,7 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.ysbbbbbb.kaleidoscopecookery.blockentity.kitchen.ChoppingBoardBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopecookery.crafting.recipe.ChoppingBoardRecipe;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModItems;
+import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.tag.TagMod;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
@@ -102,16 +103,27 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
             return;
         }
 
-        // 无料 → 放料
+        // 无料 → 放料（F-117：onPutItem false 时原料回包防吞）
         if (board.getCurrentCutStack().isEmpty()) {
             ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(recipe.getIngredient()), true);
-            if (!take.isEmpty() && board.onPutItem(level, maid, take)) {
+            if (take.isEmpty()) {
+                return;
+            }
+            if (board.onPutItem(level, maid, take)) {
                 maid.swing(InteractionHand.OFF_HAND);
+            } else {
+                ItemUtils.getItemToLivingEntity(maid, take);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 菜板放料被拒，原料已回包：{} @ {}", request.id, pos);
             }
             return;
         }
 
         // 切：非破坏取刀；onCutItem 返回 true 且板已复位 = 产物已弹出
+        // F-112：板上在制物料非本单原料时不动刀（防切异物错计）
+        if (!recipe.getIngredient().test(board.getCurrentCutStack())) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 菜板在制物料非本单原料（{}），不动刀：{} @ {}", board.getCurrentCutStack().getItem(), request.id, pos);
+            return;
+        }
         ItemStack knife = ItemHandlerUtils.tryGet(maid.getAvailableInv(false), StackPredicate.of(s -> s.is(TagMod.KITCHEN_KNIFE)));
         if (knife.isEmpty()) {
             return;

@@ -138,6 +138,12 @@ public class TeapotCookTask implements ICookTask {
         switch (teapot.getStatus()) {
             case 2 -> {
                 // 完成：取茶（BE 拆除并把茶壶物品交还女仆，下轮订单由补放位循环）
+                // F-118：壶内成品非本单茶时不动（防他单 brew 被本单取走计数）
+                ItemStack brewed = teapot.getResult();
+                if (!brewed.isEmpty() && brewed.getItem() != recipe.result().getItem()) {
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶内为非本单茶品（{}），不取：{} @ {}", brewed.getItem(), request.id, pos);
+                    return;
+                }
                 if (teapot.takeTeapot(level, maid)) {
                     maid.swing(InteractionHand.OFF_HAND);
                     request.remain--;
