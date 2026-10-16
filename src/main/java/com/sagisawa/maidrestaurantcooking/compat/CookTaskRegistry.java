@@ -10,6 +10,7 @@ import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.CraftingBowlCookTas
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.FarmcharmHeatedCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.MincerCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.SiloCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.fd.FDCuttingBoardCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.StoveCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
@@ -17,6 +18,7 @@ import com.sagisawa.maidrestaurantcooking.cooktask.furnace.FurnaceRoutingCookTas
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexStockpotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.herbalbrews.TeaKettleCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.BambooTrayCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.ChoppingBoardCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.TeapotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.worldliquor.WorldliquorFreezerCookTask;
 
@@ -49,6 +51,7 @@ public final class CookTaskRegistry {
             // M2 森罗余量：竹匾（自环境计时）、茶壶（注液+补放闭环）
             registerTask(new BambooTrayCookTask());
             registerTask(new TeapotCookTask());
+            registerTask(new ChoppingBoardCookTask());
         }
 
         // M2 定时容器族（ModList 门控，optional AFTER）
@@ -77,6 +80,9 @@ public final class CookTaskRegistry {
         }
         if (CompatMods.HERBALBREWS) {
             registerTask(new TeaKettleCookTask());
+        }
+        if (CompatMods.FARMERSDELIGHT) {
+            registerTask(new FDCuttingBoardCookTask());
         }
 
         // M3 炉式三实类（原版类型，无门控；路由表默认原版炉，config 可路由 modded 方块）
