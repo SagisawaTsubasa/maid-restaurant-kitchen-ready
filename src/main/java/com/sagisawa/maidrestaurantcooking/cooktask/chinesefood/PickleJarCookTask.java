@@ -163,7 +163,9 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
                     maid.swing(InteractionHand.OFF_HAND);
                     inserted = true;
                 } else {
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 腌菜罐投料未落槽（槽满或被拒）：{} @ {}", request.id, pos);
+                    // F-104：insertItem 未消耗传入栈（totalInserted=0 且无空槽）时回包
+                    ItemUtils.getItemToLivingEntity(maid, take);
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 腌菜罐投料未落槽（槽满或被拒），原料已回包：{} @ {}", request.id, pos);
                 }
             }
         }

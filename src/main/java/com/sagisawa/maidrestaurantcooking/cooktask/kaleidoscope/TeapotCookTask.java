@@ -254,8 +254,13 @@ public class TeapotCookTask implements ICookTask {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos.below()), Direction.UP, pos.below(), false);
         net.minecraft.world.item.context.BlockPlaceContext ctx =
                 new net.minecraft.world.item.context.BlockPlaceContext(level, fakePlayer, InteractionHand.MAIN_HAND, teapotItem, hit);
-        if (blockItem.place(ctx).consumesAction()) {
+        var result = blockItem.place(ctx);
+        if (result.consumesAction()) {
             MaidRestaurantCooking.LOGGER.debug("[xia-de-chu-fang] 女仆补放茶壶 @ {}", pos);
+        } else {
+            // F-102：place 失败（落位被占/状态拒绝）——已抽取的茶壶必须回包
+            com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, teapotItem);
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶补放失败，物品已回包 @ {}", pos);
         }
     }
 }
