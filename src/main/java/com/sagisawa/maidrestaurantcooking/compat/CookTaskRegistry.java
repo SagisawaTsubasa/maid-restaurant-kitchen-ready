@@ -2,27 +2,46 @@ package com.sagisawa.maidrestaurantcooking.compat;
 
 import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.utils.CookTasks;
+import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexStockpotCookTask;
 
 /**
- * 批量注册器雏形（M0）：对本体注册口的唯一入口。
+ * 批量注册器（M1 公共件）：对本体注册口的唯一入口。
  *
- * <p>纪律（反编译实证）：
+ * <p>纪律（反编译实证，wiki 接口页）：
  * <ul>
  *   <li>CookTasks.register(task) 只把任务入本体暂存队列，本体 FMLCommonSetupEvent 才冲刷进 taskMap；
- *       因此调用必须发生在本 mod 构造期（早于本体冲刷）。</li>
- *   <li>冲刷前调 CookTasks.getTask(...) 拿不到东西（getRegistered() 返回的是队列快照非注册表）。</li>
+ *       因此 registerAll() 必须在 mod 构造期调用（早于本体冲刷）。</li>
+ *   <li>冲刷前调 CookTasks.getTask(...) 拿不到东西（getRegistered() 返回队列快照非注册表）。</li>
  *   <li>同 RecipeType 键后到覆盖（taskMap.put）：绝不注册本体内置 8 键与森罗酒馆 3 键。</li>
- *   <li>注册失败的判定要在 M1 批量注册器里做：commonSetup 后自查 taskMap 是否含本包 UID，缺了 ERROR 级日志（错误必须响）。</li>
+ *   <li>每个任务的注册按 CompatMods 门控分流——目标 mod 不在场就不注册，靠 mods.toml optional 声明兜底。</li>
+ *   <li>注册失败的判定（M6 冒烟统一做）：commonSetup 后自查 taskMap 是否含本包 UID，缺了 ERROR 级日志。</li>
  * </ul>
- *
- * <p>M0 无调用方；M1 起各任务在此登记门控条件后入队。
  */
 public final class CookTaskRegistry {
     private CookTaskRegistry() {
     }
 
-    /** 构造期直通：把任务交给本体暂存队列。仅限 mod 构造期调用。 */
+    /**
+     * mod 构造期调用：按门控把全部任务入本体暂存队列。
+     * M1：森罗 flex 两类（必需链常在）；M2+ 各家族追加。
+     */
+    public static void registerAll() {
+        // 森罗 flex（T1 打样）：本体硬依赖链，KALEIDOSCOPE_COOKERY 恒真，门控保留为纪律示范
+        if (CompatMods.KALEIDOSCOPE_COOKERY) {
+            registerTask(new FlexPotCookTask());
+            registerTask(new FlexStockpotCookTask());
+        }
+
+        MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 构造期入队完成（门控分流后）");
+    }
+
+    /** 构造期直通：把任务交给本体暂存队列。仅限 mod 构造期调用。
+     *  注意：构造期 RecipeType 注册表尚未填充（RegisterEvent 在 CONSTRUCT 之后），
+     *  此处禁止调 task.getType()（森罗 ModRecipes 字段此刻为 null）；UID 由任务自身常量提供。 */
     public static void registerTask(ICookTask task) {
         CookTasks.register(task);
+        MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 入队：{}", task.getUID());
     }
 }
