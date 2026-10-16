@@ -10,7 +10,9 @@ import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.CraftingBowlCookTas
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.FarmcharmHeatedCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.MincerCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.SiloCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.dd.MonsterPotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fd.FDCuttingBoardCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.furniture.FurnitureSlicingCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.StoveCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
@@ -83,6 +85,12 @@ public final class CookTaskRegistry {
         }
         if (CompatMods.FARMERSDELIGHT) {
             registerTask(new FDCuttingBoardCookTask());
+        }
+        if (CompatMods.DUNGEONSDELIGHT) {
+            registerTask(new MonsterPotCookTask());
+        }
+        if (CompatMods.REFURBISHED_FURNITURE) {
+            registerTask(new FurnitureSlicingCookTask());
         }
 
         // M3 炉式三实类（原版类型，无门控；路由表默认原版炉，config 可路由 modded 方块）
