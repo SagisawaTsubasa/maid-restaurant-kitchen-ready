@@ -12,6 +12,10 @@ import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.MincerCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.SiloCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.dd.MonsterPotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fd.FDCuttingBoardCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.brewing.ApplePressCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.brewing.BrewstationCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.brewing.FermentationBarrelCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.brewing.PalmBarCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.furniture.FurnitureSlicingCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.StoveCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
@@ -91,6 +95,17 @@ public final class CookTaskRegistry {
         }
         if (CompatMods.REFURBISHED_FURNITURE) {
             registerTask(new FurnitureSlicingCookTask());
+        }
+        // M5 酿造桶族
+        if (CompatMods.VINERY) {
+            registerTask(new ApplePressCookTask());
+            registerTask(new FermentationBarrelCookTask());
+        }
+        if (CompatMods.BREWERY) {
+            registerTask(new BrewstationCookTask());
+        }
+        if (CompatMods.BEACHPARTY) {
+            registerTask(new PalmBarCookTask());
         }
 
         // M3 炉式三实类（原版类型，无门控；路由表默认原版炉，config 可路由 modded 方块）
