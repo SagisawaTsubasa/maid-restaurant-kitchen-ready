@@ -208,7 +208,10 @@ public class CraftingTableCookTask implements ICookTask {
             }
         }
 
-        request.remain--;
+        // F-175：产物数量对账——合成台产物数量常态 ≠1（曲奇×8 等），最小合成单位=result.getCount()；
+        // 单次合成核销 min(count, remain)，超出订单部分同批交付（进女仆包，属配方固有产出）
+        int delivered = Math.min(result.getCount(), request.remain);
+        request.remain = Math.max(0, request.remain - delivered);
         maid.swing(InteractionHand.OFF_HAND);
     }
 

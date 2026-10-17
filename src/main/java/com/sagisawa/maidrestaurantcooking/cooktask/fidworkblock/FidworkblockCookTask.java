@@ -170,10 +170,11 @@ public class FidworkblockCookTask implements ICookTask {
     }
 
     @Nullable
-    private CookingRecipe resolveRecipe(ServerLevel level, CookRequest request, BlockPos pos) {
+    private CookingRecipe resolveRecipe(ServerLevel level, CookRequest request, @Nullable BlockPos pos) {
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
         if (holder == null || !RECIPE_TYPE_ID.equals(BuiltInRegistries.RECIPE_TYPE.getKey(holder.value().getType()))
                 || !(holder.value() instanceof CookingRecipe recipe)) {
+            // F-176：search 侧 pos 传 null → 键只含配方 id（稳定键），女仆移动不产生新键
             errorStall("recipe-missing:" + request.id, pos,
                     "fidworkblock 请求配方缺失或类型不符：{}", request.id);
             return null;
@@ -229,40 +230,40 @@ public class FidworkblockCookTask implements ICookTask {
         if (request == null) {
             return null;
         }
-        BlockPos probe = maid.blockPosition();
-        CookingRecipe recipe = resolveRecipe(level, request, probe);
+        CookingRecipe recipe = resolveRecipe(level, request, null);
         if (recipe == null) {
             return null; // resolveRecipe 已窗口化 ERROR（F-170）
         }
         String appliance = recipe.getAppliance();
         if (!DRIVEN_APPLIANCES.contains(appliance)) {
             // F-165：确定性误配必须可观测（steambox 边界/上游新设备）
-            warnStall("appliance-undriven", probe, "fidworkblock 设备 {} 未接入（边界），订单挂起：{} @ {}",
-                    appliance, request.id, probe);
+            warnStall("appliance-undriven:" + appliance, null, "fidworkblock 设备 {} 未接入（边界），订单挂起：{}",
+                    appliance, request.id);
             return null;
         }
         ResourceLocation target = ResourceLocation.fromNamespaceAndPath(MOD_ID, appliance);
         boolean frying = appliance.equals("fryingpan");
         BlockPos center = maid.getBrainSearchPos();
+        BlockPos[] notOnDryer = new BlockPos[1];
         Predicate<BlockPos> matcher = pos -> {
             if (!target.equals(BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()))
                     || BlockUsageManager.getUserCount(pos) > 0) {
                 return false;
             }
+            // F-183：matcher 顺手记录首个「方块对但未叠放」的炸锅（零额外遍历），供 search 空手时响出
+            if (frying && notOnDryer[0] == null
+                    && level.getBlockEntity(pos) instanceof FryingpanBlockEntity fp && !fp.isOnDryer()) {
+                notOnDryer[0] = pos.immutable();
+            }
             // 空闲过滤（防抢他人进行中设备）；受理中工位由 isValidWorkBlock 维持，不受此限
             return isIdleForSearch(level.getBlockEntity(pos), appliance, frying);
         };
         List<BlockPos> found = SearchUtils.search(center, horizontalSearchRange, verticalSearchRange, matcher);
-        if (found.isEmpty() && frying) {
+        if (found.isEmpty() && frying && notOnDryer[0] != null) {
             // F-165/F-128 模式：范围内有炸锅方块但不叠放（确定性误配）→ 响出，与「无设备」静默区分
-            for (BlockPos p : BlockPos.withinManhattan(center, horizontalSearchRange, verticalSearchRange, horizontalSearchRange)) {
-                if (target.equals(BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()))
-                        && level.getBlockEntity(p) instanceof FryingpanBlockEntity fp && !fp.isOnDryer()) {
-                    warnStall("fryingpan-not-on-dryer", p, "fidworkblock 范围内炸锅未叠放在变温烤箱上，订单挂起：{} @ {}",
-                            request.id, p);
-                    break;
-                }
-            }
+            BlockPos p = notOnDryer[0];
+            warnStall("fryingpan-not-on-dryer", p, "fidworkblock 范围内炸锅未叠放在变温烤箱上，订单挂起：{} @ {}",
+                    request.id, p);
         }
         return found.isEmpty() ? null
                 : found.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get();
@@ -306,11 +307,9 @@ public class FidworkblockCookTask implements ICookTask {
         if (request == null) {
             return true; // 无单探测：维持宽容
         }
-        RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
-        if (holder == null || !(holder.value() instanceof CookingRecipe recipe)) {
-            return false; // 配方失效：判失效让本体重新 search（search 侧同失败 → 窗口化 WARN 挂起）
-        }
-        return blockKey.getPath().equals(recipe.getAppliance());
+        // F-184：配方判据单点化（复用 resolveRecipe 的三判，防与 cookTick 口径分叉）
+        CookingRecipe recipe = resolveRecipe(level, request, pos);
+        return recipe != null && blockKey.getPath().equals(recipe.getAppliance());
     }
 
     @Override
@@ -558,16 +557,12 @@ public class FidworkblockCookTask implements ICookTask {
                 if (take.isEmpty()) {
                     return; // 缺料静默等待（已投部分留台面，下 tick 续投——计数式核对支持续投）
                 }
-                boolean putIn = false;
-                for (int i = 0; i < outputSlot && !putIn; i++) {
-                    if (inv.getStackInSlot(i).isEmpty()) {
-                        inv.setStackInSlot(i, take);
-                        putIn = true;
-                    }
-                }
-                if (!putIn) {
-                    ItemUtils.getItemToLivingEntity(maid, take);
-                    warnStall("insert-reject:" + name, pos, "fidworkblock {} 输入槽满，原料已回包：{} @ {}", name, request.id, pos);
+                // F-178：走 BE 自己的投料口（内含槽位角色判定）并核 remainder（防吞料 F-174 同族）
+                ItemStack remainder = addItem.apply(take);
+                if (!remainder.isEmpty()) {
+                    ItemUtils.getItemToLivingEntity(maid, remainder);
+                    warnStall("insert-reject:" + name, pos, "fidworkblock {} 投料被拒（{}），原料已回包：{} @ {}",
+                            name, remainder.getItem(), request.id, pos);
                     return;
                 }
             }
@@ -621,6 +616,11 @@ public class FidworkblockCookTask implements ICookTask {
             return;
         }
 
+        // F-177：加工中不补投（与密封系/压榨机对称；BE serverTick 自走，进度>0 即在加工）
+        if (c.getCookingProgress() > 0) {
+            return;
+        }
+
         // F-164：输入区残留扫描（计数式核对+异物整体退料，与密封系同构）
         int inputStart = c.getApplianceType().getInputStartSlot();
         int inputSlots = c.getApplianceType().getInputSlots();
@@ -644,9 +644,6 @@ public class FidworkblockCookTask implements ICookTask {
             c.setChanged();
             warnStall("residue:stove", pos, "fidworkblock 炉灶系输入区存在与本单不符的料，已退料回包：{} @ {}", request.id, pos);
             return;
-        }
-        if (supply.isEmpty() && missing.size() == need.size()) {
-            // 空设备：正常补投路径继续
         }
         boolean supplied = false;
         for (Ingredient ing : missing) {
@@ -699,6 +696,8 @@ public class FidworkblockCookTask implements ICookTask {
                 if (take.isEmpty()) {
                     return; // 缺料静默等待
                 }
+                // F-174（javap 实证：WokBlockEntity.addItem 为 void，无 remainder 可核）——
+                // 收口点是前置 canAddItem()（BE 内含满/非配方料判定）
                 if (!w.canAddItem()) {
                     ItemUtils.getItemToLivingEntity(maid, take);
                     warnStall("insert-reject:wok", pos, "fidworkblock 炒锅投料被拒（满/非配方料），原料已回包：{} @ {}", request.id, pos);
