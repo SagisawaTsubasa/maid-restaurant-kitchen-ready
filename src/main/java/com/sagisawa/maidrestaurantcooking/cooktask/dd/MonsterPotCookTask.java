@@ -34,6 +34,12 @@ import java.util.function.Predicate;
  */
 public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPotRecipe> {
 
+    /** F-156：锅满退避截止时间（30s，窗内不抽还料防抖动）。 */
+    private volatile long fullBackoffUntilMs;
+
+    /** F-156：锅满 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long stallLastWarnMs;
+
     @Override
     public String getUID() {
         return "MonsterPotCookTask";
@@ -143,9 +149,12 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
             return;
         }
 
-        // 投配料（0-5）与容器（7）
+        // 投配料（0-5）与容器（7）；F-156：锅满退避窗内不抽料
         var inv = pot.getInventory();
         boolean supplied = false;
+        if (System.currentTimeMillis() < fullBackoffUntilMs) {
+            return;
+        }
         for (Ingredient ingredient : recipe.getIngredients()) {
             if (ingredient.isEmpty()) {
                 continue;
@@ -172,8 +181,13 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                     }
                 }
                 if (!putIn) {
-                    // F-003：按本次放入判定归还
+                    // F-003+F-156：按本次放入判定归还；锅满设退避+响出（30s 窗）
                     ItemUtils.getItemToLivingEntity(maid, take);
+                    fullBackoffUntilMs = System.currentTimeMillis() + 30_000L;
+                    if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                        stallLastWarnMs = System.currentTimeMillis();
+                        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅配料槽满，原料回包待重试：{} @ {}", request.id, pos);
+                }
                 }
             }
         }

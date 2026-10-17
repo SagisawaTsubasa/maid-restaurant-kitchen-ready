@@ -36,6 +36,9 @@ import java.util.function.Predicate;
  */
 public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleRecipe> {
 
+    /** F-155：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long stallLastWarnMs;
+
     private static final int SLOT_OUTPUT = 0;
     private static final int SLOT_INGREDIENT_FIRST = 1;
     private static final int SLOT_INGREDIENT_LAST = 4;
@@ -136,6 +139,24 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
             kettle.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
             request.remain--;
+            return;
+        }
+
+        // F-155：水/燃料槽被非标签异物占据 → WARN 停摆（防订单无声永挂）
+        ItemStack waterSlot = kettle.getItem(SLOT_WATER);
+        if (!waterSlot.isEmpty() && !waterSlot.is(TagsRegistry.SMALL_WATER_FILL) && !waterSlot.is(TagsRegistry.LARGE_WATER_FILL)) {
+            if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                stallLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 煮茶壶水槽为非注水物品（{}），停摆待处理：{} @ {}", waterSlot.getItem(), request.id, pos);
+            }
+            return;
+        }
+        ItemStack heatSlot = kettle.getItem(SLOT_HEAT);
+        if (!heatSlot.isEmpty() && !heatSlot.is(TagsRegistry.HEAT_ITEMS)) {
+            if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                stallLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 煮茶壶燃料槽为非燃料物品（{}），停摆待处理：{} @ {}", heatSlot.getItem(), request.id, pos);
+            }
             return;
         }
 
