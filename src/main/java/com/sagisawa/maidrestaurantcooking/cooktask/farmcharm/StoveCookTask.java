@@ -127,12 +127,27 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
                 stove.setItem(4, fuel);
                 stove.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
-            } else if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
-                noFuelLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
+            } else {
+                // F-152：配料已在位（确实在等点火）才响无燃料 WARN；空灶等待属正常巡检不刷屏
+                boolean ingredientPresent = false;
+                for (int slot : stove.getIngredientSlots()) {
+                    if (!stove.getItem(slot).isEmpty()) {
+                        ingredientPresent = true;
+                        break;
+                    }
+                }
+                if (ingredientPresent && System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
+                    noFuelLastWarnMs = System.currentTimeMillis();
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶配料在位但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
+                }
             }
         } else if (!AbstractFurnaceFuelCheck.isFuel(stove.getItem(4))) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶燃料槽为非燃料异物（{}）：{} @ {}", stove.getItem(4).getItem(), request.id, pos);
+            // F-150：异物占燃料槽 → 停摆（return），WARN 带窗
+            if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
+                noFuelLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶燃料槽为非燃料异物（{}），停摆待处理：{} @ {}", stove.getItem(4).getItem(), request.id, pos);
+            }
+            return;
         }
 
         // 投配料
