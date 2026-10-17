@@ -93,7 +93,7 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
         }
         PalmBarRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] palm_bar 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] palm_bar 请求配方缺失或类型不符：{}", request.id);
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
@@ -102,7 +102,7 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
         ItemStack output = bar.getItem(0);
         ItemStack barExpect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() != barExpect.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 吧台输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 吧台输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
@@ -143,7 +143,7 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
                 }
                 if (!putIn) {
                     ItemUtils.getItemToLivingEntity(maid, take);
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] palm_bar 满槽放料失败，原料已回包：{}", request.id);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] palm_bar 满槽放料失败，原料已回包：{}", request.id);
                 }
             }
         }

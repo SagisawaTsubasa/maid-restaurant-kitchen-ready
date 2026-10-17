@@ -99,7 +99,7 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
         }
         ChoppingBoardRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] chopping_board 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] chopping_board 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -113,7 +113,7 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
                 maid.swing(InteractionHand.OFF_HAND);
             } else {
                 ItemUtils.getItemToLivingEntity(maid, take);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 菜板放料被拒，原料已回包：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 菜板放料被拒，原料已回包：{} @ {}", request.id, pos);
             }
             return;
         }
@@ -121,7 +121,7 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
         // 切：非破坏取刀；onCutItem 返回 true 且板已复位 = 产物已弹出
         // F-112：板上在制物料非本单原料时不动刀（防切异物错计）
         if (!recipe.getIngredient().test(board.getCurrentCutStack())) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 菜板在制物料非本单原料（{}），不动刀：{} @ {}", board.getCurrentCutStack().getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 菜板在制物料非本单原料（{}），不动刀：{} @ {}", board.getCurrentCutStack().getItem(), request.id, pos);
             return;
         }
         ItemStack knife = ItemHandlerUtils.tryGet(maid.getAvailableInv(false), StackPredicate.of(s -> s.is(TagMod.KITCHEN_KNIFE)));
@@ -133,7 +133,7 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
             maid.swing(InteractionHand.OFF_HAND);
             if (board.getCurrentCutStack().isEmpty()) {
                 // F-012：产物以掉落实体落地，语义为"烹饪完成"，拾取由女仆常规拾取行为兜底（真机 sweep C1 专项验证）
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 菜板产物已落地待拾取：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 菜板产物已落地待拾取：{} @ {}", request.id, pos);
                 request.remain--;
             }
         }

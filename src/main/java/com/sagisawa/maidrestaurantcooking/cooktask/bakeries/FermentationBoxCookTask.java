@@ -99,7 +99,7 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
         }
         FermentationBoxRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] fermentation_box 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] fermentation_box 请求配方缺失或类型不符：{}", request.id);
             return;
         }
         ItemStack result = recipeResult(recipe, level);
@@ -112,7 +112,7 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
         for (int i = 0; i < box.getContainerSize(); i++) {
             ItemStack scan = box.getItem(i);
             if (!scan.isEmpty() && scan.getItem() != result.getItem() && !ingredient.test(scan)) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 醒发箱槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 醒发箱槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }
         }
@@ -162,6 +162,6 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
             }
         }
         ItemUtils.getItemToLivingEntity(maid, take);
-        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] fermentation_box 满槽放料失败，原料已回包：{}", request.id);
+        MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] fermentation_box 满槽放料失败，原料已回包：{}", request.id);
     }
 }

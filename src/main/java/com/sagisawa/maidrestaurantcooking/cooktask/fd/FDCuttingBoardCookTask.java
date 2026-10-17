@@ -105,7 +105,7 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
         }
         CuttingBoardRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] fd_cutting 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] fd_cutting 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -113,7 +113,7 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
         if (!board.getStoredItem().isEmpty()) {
             var storedInput = recipe.getIngredients().isEmpty() ? Ingredient.EMPTY : recipe.getIngredients().getFirst();
             if (!storedInput.isEmpty() && !storedInput.test(board.getStoredItem())) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] FD 砧板在制物料非本单原料（{}），不动刀：{} @ {}", board.getStoredItem().getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] FD 砧板在制物料非本单原料（{}），不动刀：{} @ {}", board.getStoredItem().getItem(), request.id, pos);
                 return;
             }
         }
@@ -149,7 +149,7 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
         if (processed) {
             maid.swing(InteractionHand.OFF_HAND);
             // F-012：产物落地依赖女仆拾取 AI（真机 sweep C2 验证）
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] FD 砧板产物已落地待拾取：{} @ {}", request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] FD 砧板产物已落地待拾取：{} @ {}", request.id, pos);
             request.remain--;
         }
     }

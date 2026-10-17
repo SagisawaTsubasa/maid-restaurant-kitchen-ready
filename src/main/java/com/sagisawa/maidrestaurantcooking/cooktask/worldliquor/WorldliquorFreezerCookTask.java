@@ -151,7 +151,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
         }
         FreezerRecipe recipe = resolveRecipe(level, request);
         if (recipe == null || recipe.isEmpty()) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] worldliquor freezer 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] worldliquor freezer 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -159,7 +159,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
         ItemStack output = freezer.outputInventory.getStackInSlot(0);
         if (!output.isEmpty() && output.getItem() != recipe.getResultItem().getItem()) {
             // F-111：异物产出静默停摆 → 响出
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰柜输出槽为非本单产物（{}），请求停摆待人工处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰柜输出槽为非本单产物（{}），请求停摆待人工处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty()) {
@@ -190,14 +190,14 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             if (cap == null) {
                 // 谓词已滤 fluid 容器，此处为防御：容器回包
                 ItemUtils.getItemToLivingEntity(maid, take);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液容器无 fluid capability，已回包：{}", request.id);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 注液容器无 fluid capability，已回包：{}", request.id);
                 return;
             }
             // F-105：SIMULATE 预检——罐完全不容（preview=0，异液占罐）时才跳过；
             // 部分可容场景放行（剩余作废由后续 partial WARN 兜底，F-114 放宽避免封死部分注入）
             int preview = freezer.tank.fill(need.copy(), IFluidHandler.FluidAction.SIMULATE);
             if (preview <= 0) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer SIMULATE {}/{} 罐内异液或容量不足，跳过注液：{}", preview, need.getAmount(), request.id);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer SIMULATE {}/{} 罐内异液或容量不足，跳过注液：{}", preview, need.getAmount(), request.id);
                 ItemUtils.getItemToLivingEntity(maid, take);
                 return;
             }
@@ -205,12 +205,12 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             // 所有分支统一回包（F-001）：drain 已就地改写容器，满载接受时空桶即正确产物，必须归还
             ItemUtils.getItemToLivingEntity(maid, take);
             if (drained.isEmpty()) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液 drain 未成，容器已回包：{}", request.id);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 注液 drain 未成，容器已回包：{}", request.id);
                 return;
             }
             int accepted = freezer.tank.fill(drained, IFluidHandler.FluidAction.EXECUTE);
             if (accepted < drained.getAmount()) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 注液被部分接受（{}/{}），多余流体随空罐作废：{}",
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 注液被部分接受（{}/{}），多余流体随空罐作废：{}",
                         accepted, drained.getAmount(), request.id);
             }
             maid.swing(InteractionHand.OFF_HAND);
@@ -256,7 +256,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
                 setBackoff(level, pos, 30_000L);
                 if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                     stallLastWarnMs = System.currentTimeMillis();
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰柜输入槽满，原料回包待重试：{} @ {}", request.id, pos);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰柜输入槽满，原料回包待重试：{} @ {}", request.id, pos);
             }
             }
         }

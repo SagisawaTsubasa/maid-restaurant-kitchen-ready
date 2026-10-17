@@ -98,7 +98,7 @@ public class BambooTrayCookTask implements ICookTask {
         }
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
         if (holder == null || !(holder.value() instanceof BambooTrayRecipe recipe)) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] bamboo_tray 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] bamboo_tray 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -107,7 +107,7 @@ public class BambooTrayCookTask implements ICookTask {
         for (int slot = 0; slot < tray.getContainerSize(); slot++) {
             ItemStack scan = tray.getItem(slot);
             if (!scan.isEmpty() && scan.getItem() != trayExpect.getItem() && !recipe.getIngredient().test(scan)) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 竹匾槽位存在异物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 竹匾槽位存在异物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }
         }
@@ -154,7 +154,7 @@ public class BambooTrayCookTask implements ICookTask {
             }
         }
         ItemUtils.getItemToLivingEntity(maid, input);
-        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] bamboo_tray 满槽放料失败，原料已回包：{}", request.id);
+        MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] bamboo_tray 满槽放料失败，原料已回包：{}", request.id);
     }
 
     @Override

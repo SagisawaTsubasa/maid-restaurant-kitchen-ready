@@ -57,7 +57,7 @@ public final class CompatMods {
         Logger log = com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking.LOGGER;
         if (!MAID_RESTAURANT || !KALEIDOSCOPE_COOKERY) {
             // required 依赖缺失时 FML 会先拦截；走到这里仍为 false 属异常状态，响出来
-            log.error("[xia-de-chu-fang] 必需前置异常：maid_restaurant={}, kaleidoscope_cookery={}",
+            log.error("[kitchen-ready] 必需前置异常：maid_restaurant={}, kaleidoscope_cookery={}",
                     MAID_RESTAURANT, KALEIDOSCOPE_COOKERY);
             return;
         }
@@ -91,7 +91,7 @@ public final class CompatMods {
         long on = optional.values().stream().filter(Boolean::booleanValue).count();
         StringBuilder sb = new StringBuilder();
         optional.forEach((k, v) -> sb.append(v ? '+' : '-').append(k).append(' '));
-        log.info("[xia-de-chu-fang] 软依赖门控：必需链 OK（maid_restaurant + kaleidoscope_cookery），可选目标 {} 个在场：{}",
+        log.info("[kitchen-ready] 软依赖门控：必需链 OK（maid_restaurant + kaleidoscope_cookery），可选目标 {} 个在场：{}",
                 on, sb);
     }
 }

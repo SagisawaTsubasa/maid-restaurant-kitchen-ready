@@ -6,8 +6,9 @@ plugins {
 version = mod_version
 group = mod_group_id
 
+// 产物 JAR 名用定稿英文名（Maid Restaurant: Kitchen-Ready）；modid 仍为 maid_restaurant_cooking（注册身份不可变）
 base {
-    archivesName = mod_id
+    archivesName = 'maid-restaurant-kitchen-ready'
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)

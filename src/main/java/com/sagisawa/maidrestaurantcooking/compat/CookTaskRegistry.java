@@ -121,7 +121,7 @@ public final class CookTaskRegistry {
         registerTask(new FurnaceRoutingCookTasks.Smoking());
         registerTask(new FurnaceRoutingCookTasks.Blasting());
 
-        MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 构造期入队完成（门控分流后）");
+        MaidRestaurantCooking.LOGGER.info("[kitchen-ready] CookTask 构造期入队完成（门控分流后）");
     }
 
     /** 构造期直通：把任务交给本体暂存队列。仅限 mod 构造期调用。
@@ -130,6 +130,6 @@ public final class CookTaskRegistry {
     public static void registerTask(ICookTask task) {
         CookTasks.register(task);
         QUEUED.add(task);
-        MaidRestaurantCooking.LOGGER.info("[xia-de-chu-fang] CookTask 入队：{}", task.getUID());
+        MaidRestaurantCooking.LOGGER.info("[kitchen-ready] CookTask 入队：{}", task.getUID());
     }
 }

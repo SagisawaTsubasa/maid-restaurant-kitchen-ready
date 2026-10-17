@@ -44,7 +44,7 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
         var be = (net.minecraft.world.level.block.entity.BlockEntity) container;
         R recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] 加热锅请求配方缺失或类型不符：{}（{}）", request.id, getUID());
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] 加热锅请求配方缺失或类型不符：{}（{}）", request.id, getUID());
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
@@ -57,7 +57,7 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
             ItemStack scan = container.getItem(i);
             if (!scan.isEmpty() && scan.getItem() != expect.getItem()
                     && scanIngredients.stream().noneMatch(ing -> ing.test(scan))) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] {} 槽位存在非本单产物（{}），停摆待处理：{} @ {}", getUID(), scan.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] {} 槽位存在非本单产物（{}），停摆待处理：{} @ {}", getUID(), scan.getItem(), request.id, pos);
                 return;
             }
         }
@@ -108,7 +108,7 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
                 maid.swing(InteractionHand.OFF_HAND);
             } else {
                 ItemUtils.getItemToLivingEntity(maid, take);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] {} 满槽放料失败，原料已回包：{}", getUID(), request.id);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] {} 满槽放料失败，原料已回包：{}", getUID(), request.id);
             }
         }
     }

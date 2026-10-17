@@ -102,7 +102,7 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
         }
         CraftingBowlRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] crafting_bowl 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] crafting_bowl 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -110,7 +110,7 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
         ItemStack output = bowl.getItem(OUTPUT_SLOT);
         ItemStack bowlExpect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() != bowlExpect.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 搅拌碗输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 搅拌碗输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
@@ -153,7 +153,7 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
                 }
                 if (!putIn) {
                     ItemUtils.getItemToLivingEntity(maid, take);
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] crafting_bowl 满槽放料失败，原料已回包：{}", request.id);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] crafting_bowl 满槽放料失败，原料已回包：{}", request.id);
                 }
             }
         }
@@ -168,7 +168,7 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
                         && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
                     if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                         stallLastWarnMs = System.currentTimeMillis();
-                        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 搅拌碗内存在异物（{}），不驱动：{} @ {}", scan.getItem(), request.id, pos);
+                        MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 搅拌碗内存在异物（{}），不驱动：{} @ {}", scan.getItem(), request.id, pos);
                     }
                     return;
                 }

@@ -122,7 +122,7 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
         }
         TeaKettleRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] kettle 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] kettle 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -130,7 +130,7 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
         ItemStack output = kettle.getItem(SLOT_OUTPUT);
         if (!output.isEmpty() && output.getItem() != recipe.getResultItem(level.registryAccess()).getItem()) {
             // F-111：异物产出静默停摆 → 响出
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 煮茶壶槽 0 为非本单产物（{}），请求停摆待人工处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 煮茶壶槽 0 为非本单产物（{}），请求停摆待人工处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty()) {
@@ -147,7 +147,7 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
         if (!waterSlot.isEmpty() && !waterSlot.is(TagsRegistry.SMALL_WATER_FILL) && !waterSlot.is(TagsRegistry.LARGE_WATER_FILL)) {
             if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                 stallLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 煮茶壶水槽为非注水物品（{}），停摆待处理：{} @ {}", waterSlot.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 煮茶壶水槽为非注水物品（{}），停摆待处理：{} @ {}", waterSlot.getItem(), request.id, pos);
             }
             return;
         }
@@ -155,7 +155,7 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
         if (!heatSlot.isEmpty() && !heatSlot.is(TagsRegistry.HEAT_ITEMS)) {
             if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                 stallLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 煮茶壶燃料槽为非燃料物品（{}），停摆待处理：{} @ {}", heatSlot.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 煮茶壶燃料槽为非燃料物品（{}），停摆待处理：{} @ {}", heatSlot.getItem(), request.id, pos);
             }
             return;
         }

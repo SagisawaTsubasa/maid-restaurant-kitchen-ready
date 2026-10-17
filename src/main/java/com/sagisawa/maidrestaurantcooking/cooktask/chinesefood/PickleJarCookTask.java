@@ -108,7 +108,7 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
         }
         PickleJarRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] pickle_jar 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] pickle_jar 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -125,7 +125,7 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
             ItemStack scan = jar.inventory.getStackInSlot(i);
             if (!scan.isEmpty() && scan.getItem() != output.getItem()
                     && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 腌菜罐槽位存在异物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 腌菜罐槽位存在异物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }
         }
@@ -174,7 +174,7 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
                 } else {
                     // F-104：insertItem 未消耗传入栈（totalInserted=0 且无空槽）时回包
                     ItemUtils.getItemToLivingEntity(maid, take);
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 腌菜罐投料未落槽（槽满或被拒），原料已回包：{} @ {}", request.id, pos);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 腌菜罐投料未落槽（槽满或被拒），原料已回包：{} @ {}", request.id, pos);
                 }
             }
         }
