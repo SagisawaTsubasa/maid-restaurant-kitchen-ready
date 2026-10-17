@@ -48,10 +48,11 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
+        // F-136：一次取配料清单，扫描白名单与投料共用（避免逐 tick 重复构建）
         List<Ingredient> ingredients = ingredientsOf(recipe);
 
         // F-121+F-123：先扫异物——非空且非本单产物、也非本单配料的槽 → 响出停摆
-        List<Ingredient> scanIngredients = ingredientsOf(recipe);
+        List<Ingredient> scanIngredients = ingredients;
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack scan = container.getItem(i);
             if (!scan.isEmpty() && scan.getItem() != expect.getItem()
