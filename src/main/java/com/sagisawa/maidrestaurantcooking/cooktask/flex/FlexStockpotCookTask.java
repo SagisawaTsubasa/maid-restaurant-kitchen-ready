@@ -11,7 +11,6 @@ import com.github.ysbbbbbb.kaleidoscopecookery.init.ModRecipes;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModSoupBases;
 import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
 import com.mastermarisa.maid_restaurant.cooktask.StockpotCookTask;
-import com.mastermarisa.maid_restaurant.mixin.StockpotBlockEntityAccessor;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.FakePlayerUtils;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
@@ -74,6 +73,32 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         return predicates;
     }
 
+    /** 森罗 StockpotBlockEntity 私有 recipeId 字段（F-1：缓存反射，替代本体 mixin accessor）。 */
+    private static volatile java.lang.reflect.Field recipeIdField = null;
+    private static boolean recipeIdResolved = false;
+
+    private static ResourceLocation readRecipeId(StockpotBlockEntity pot) {
+        if (!recipeIdResolved) {
+            try {
+                java.lang.reflect.Field f = StockpotBlockEntity.class.getDeclaredField("recipeId");
+                f.setAccessible(true);
+                recipeIdField = f;
+            } catch (Throwable t) {
+                com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking.LOGGER.warn(
+                        "[kitchen-ready] StockpotBlockEntity.recipeId 反射解析失败，flex 配料采集降级", t);
+            }
+            recipeIdResolved = true;
+        }
+        if (recipeIdField == null) return null;
+        try {
+            return (ResourceLocation) recipeIdField.get(pot);
+        } catch (Throwable t) {
+            com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking.LOGGER.warn(
+                    "[kitchen-ready] recipeId 读取失败", t);
+            return null;
+        }
+    }
+
     @Override
     public List<ItemStack> getCurrentInput(Level level, BlockPos pos, EntityMaid maid) {
         List<ItemStack> ans = new ArrayList<>();
@@ -84,7 +109,13 @@ public class FlexStockpotCookTask extends StockpotCookTask {
             }
 
             if (pot.getStatus() == 3) {
-                ResourceLocation recipeId = ((StockpotBlockEntityAccessor) pot).getRecipeId();
+                // F-1：不再引用本体 mod 的 mixin accessor 类——mixin 配置定义的类禁止普通代码
+                // 直接类加载（sponge-mixin IllegalClassLoadError，同名机制已在 business 服崩实证），
+                // 改缓存反射读森罗私有 recipeId 字段；解析失败降级为不采集 flex 配料（任务跳过）
+                ResourceLocation recipeId = readRecipeId(pot);
+                if (recipeId == null) {
+                    return ans;
+                }
                 // 本任务只接 flex 类型请求；类型不符（非 flex 配方）时自然跳过
                 level.getRecipeManager().byKey(recipeId).ifPresent(holder -> {
                     if (!(holder.value() instanceof FlexStockpotRecipe recipe)) {
