@@ -31,6 +31,9 @@ import java.util.function.Predicate;
  */
 public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<CuttingBoardSlicingRecipe> {
 
+    /** F-144：砧板被占 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long busyLastWarnMs;
+
     @Override
     public String getUID() {
         return "FurnitureSlicingCookTask";
@@ -112,8 +115,12 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
                 request.remain--;
             }
         } else {
-            // 板被占（他单在切）：还料
+            // F-144：板被占（他单在切）——还料并响出（30s 窗防刷屏），下 tick 重试
             ItemUtils.getItemToLivingEntity(maid, take);
+            if (System.currentTimeMillis() - busyLastWarnMs > 30_000L) {
+                busyLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板被占，原料回包待重试：{} @ {}", request.id, pos);
+            }
         }
     }
 }
