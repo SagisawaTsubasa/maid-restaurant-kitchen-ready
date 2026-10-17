@@ -4,7 +4,7 @@
 
 > 没有小厨娘下不了的厨房——本体管厅堂点单，这里掌勺其余一切灶台。
 
-《女仆餐厅》（`maid_restaurant`）**0.2.9** 点单体系的补全包：通过本体 `CookTasks.register` 通用注册口，把整合包里本体未覆盖的约 **70 类 ≈2500 条**烹饪/酿造/切配配方接入「女仆厨师可做」体系——腌菜罐、竹匾、冰箱、木盆、醒发箱、筒仓、冰柜、茶壶、炉式烤熏、怪物锅、砧板切配、酿造桶、石磨、料理摆盘……全都能点。营业链（maid-restaurant-business）按配方类型自动消费本包注册的任务，无依赖无环。
+《女仆餐厅》（`maid_restaurant`）**0.2.9** 点单体系的补全包：通过本体 `CookTasks.register` 通用注册口，把整合包里本体未覆盖的约 **80 类 ≈3400 条**烹饪/酿造/切配/合成配方接入「女仆厨师可做」体系——腌菜罐、竹匾、冰箱、醒发箱、筒仓、冰柜、茶壶、炉式烤熏、**原版合成台食物合成**、怪物锅、砧板切配、酿造桶、**烟火凡人心灶台方块组（fidworkblock 11 台）**……全都能点。营业链（maid-restaurant-business）按配方类型自动消费本包注册的任务，无依赖无环。
 
 - **本名**：下得厨房（取自「上得厅堂，下得厨房」——本体管厅堂，本包下厨房）
 - **modid**：`maid_restaurant_cooking`
@@ -26,6 +26,7 @@
 
 - **exclusion.excludedRecipePrefixes**：点单菜单排除前缀。默认滤森罗酒馆酿酒键（防止同 RecipeType 后到覆盖顶掉 maidtavern/fox_trot_brew 已接手的酒馆线）与炼金坩埚（药剂非食品）。
 - **furnaceRouting.routingRules**：炉式路由映射（烧炼/烟熏/高炉 → 在场烤熏方块），M3 起生效。
+- **craftingTable.enabled**：原版合成台食物合成开关（默认 true，M8）。
 - **categoryToggles.disabledCategories**：整组关停某命名空间/配方类型，防点单菜单过载。
 
 ## 目录
@@ -50,7 +51,9 @@
 - [x] M4 乐事/农艺/烘焙/砧板（怪物锅 T2 首例+农艺五任务+砧板三系）
 - [x] M5 酿造线 + 长尾（酿造桶族四任务；特型如实入边界）
 - [x] M6 全量 sweep 自动化部分（runServer 冒烟绿；真机 sweep 待人工）
-- [ ] M7 审查收口 → 0.1.0 发布
+- [x] M7 审查收口 → 0.1.0 发布（wb 循环 12 轮 P0-P2 零新发现）
+- [x] M8 合成台食物合成（CraftingTableCookTask，minecraft:crafting FOOD 过滤 ≈841 条）
+- [x] M9 fidworkblock 灶台方块组（11 台 373 条；steambox 边界）
 
 ## 许可
 
