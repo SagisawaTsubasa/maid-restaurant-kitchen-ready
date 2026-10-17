@@ -76,6 +76,12 @@ public final class FurnaceRouting {
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由规则键解析失败（非法 ResourceLocation），已跳过：{}", s);
                 continue;
             }
+            // F-133：目标方块 id 未注册（写错/模组未装）即时诊断，防运行期静默挂起
+            if (!net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(block)) {
+                bad++;
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标方块未注册（写错或模组未装），已跳过：{}", s);
+                continue;
+            }
             ans.put(type.toString(), block);
         }
         if (bad > 0) {

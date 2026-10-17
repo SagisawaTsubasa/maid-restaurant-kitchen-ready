@@ -81,7 +81,10 @@ public abstract class AbstractTimedContainerCookTask<R extends Recipe<?>> implem
     @SuppressWarnings("unchecked")
     protected R resolveRecipe(ServerLevel level, com.mastermarisa.maid_restaurant.request.CookRequest request) {
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
-        // F-130：类匹配之外再校验 RecipeType 归属，防跨类型同名 id 错配
+        // F-130+F-131：类匹配之外再校验 RecipeType 归属，防跨类型同名 id 错配。
+        // 判据成立性：每个任务实例的 recipeType() 为固定单值——"共享配方类的双类型任务"
+        // （如 ChinesefoodFreezer 的 Freezing/Refrigerating、FidFridge 的 Freezing/Tempering）
+        // 是独立实例各自返回自己的类型，类共享不等于类型共享，此处校验无回归。
         if (holder == null || !recipeClass().isInstance(holder.value())
                 || (recipeType() != null && !recipeType().equals(holder.value().getType()))) {
             return null;

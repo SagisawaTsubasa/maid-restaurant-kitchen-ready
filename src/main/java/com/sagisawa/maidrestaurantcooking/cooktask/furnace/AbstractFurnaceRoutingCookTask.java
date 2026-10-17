@@ -72,8 +72,8 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         return "FurnaceRoutingCookTask." + routingKey();
     }
 
-    /** F-122：路由误配一次性 WARN 开关（按任务实例去重，防 tick 刷屏）。 */
-    private volatile boolean misconfiguredWarned;
+    /** F-122/F-137：路由误配 WARN 上次响出时间戳（30s 时间窗去重，重载后自然恢复）。 */
+    private volatile long misconfiguredLastWarnMs;
 
     @Nullable
     @Override
@@ -93,7 +93,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                 center, horizontalSearchRange, verticalSearchRange,
                 pos -> beCheck.test(pos) && BlockUsageManager.getUserCount(pos) <= 0
         );
-        if (found.isEmpty() && target != null && !misconfiguredWarned) {
+        if (found.isEmpty() && target != null) {
             // F-128：区分"方块在场但 BE 不符"（确凿误配，响出）与"方块未放置"（不误报）
             boolean idPresentButWrongBe = false;
             for (BlockPos p : BlockPos.withinManhattan(center, horizontalSearchRange, verticalSearchRange, horizontalSearchRange)) {
@@ -103,8 +103,8 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                     break;
                 }
             }
-            if (idPresentButWrongBe) {
-                misconfiguredWarned = true;
+            if (idPresentButWrongBe && System.currentTimeMillis() - misconfiguredLastWarnMs > 30_000L) {
+                misconfiguredLastWarnMs = System.currentTimeMillis();
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标 {} 的 BE 非炉类（误配）：该类型挂起且不会回落原版炉：{}", target, getUID());
             }
         }

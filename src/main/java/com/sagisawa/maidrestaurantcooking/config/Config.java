@@ -72,9 +72,9 @@ public final class Config {
     /** 排除判定：recipeKey（"命名空间:路径"）是否命中排除前缀。 */
     public static boolean isExcluded(String recipeKey) {
         for (String raw : EXCLUDED_RECIPE_PREFIXES.get()) {
-            // F-129：trim 用户配置，防前后空白使前缀静默失效
-            String prefix = raw == null ? "" : raw.trim();
-            if (!prefix.isEmpty() && recipeKey.startsWith(prefix)) {
+            // F-129：trim 用户配置，防前后空白使前缀静默失效；F-135：小写归一（id 全小写）
+            String prefix = raw == null ? "" : raw.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!prefix.isEmpty() && recipeKey.toLowerCase(java.util.Locale.ROOT).startsWith(prefix)) {
                 return true;
             }
         }

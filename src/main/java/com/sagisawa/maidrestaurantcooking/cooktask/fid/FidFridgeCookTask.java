@@ -115,8 +115,12 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
             return;
         }
 
-        // 输入槽已有料 → 等
-        if (!fridge.getItem(inputSlot()).isEmpty()) {
+        // 输入槽已有料：本单原料 → 等；异物 → WARN 停摆（F-132：防静默永久等待）
+        ItemStack pending = fridge.getItem(inputSlot());
+        if (!pending.isEmpty()) {
+            if (!ingredient.test(pending)) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰箱输入槽为非本单原料（{}），停摆待处理：{} @ {}", pending.getItem(), request.id, pos);
+            }
             return;
         }
 
