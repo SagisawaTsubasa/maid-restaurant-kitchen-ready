@@ -98,7 +98,7 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
         }
         StoveRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] stove 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] stove 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -106,7 +106,7 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
         ItemStack output = stove.getItem(stove.getOutputSlot());
         ItemStack stoveExpect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() != stoveExpect.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉灶输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉灶输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
@@ -138,14 +138,14 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
                 }
                 if (ingredientPresent && System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
                     noFuelLastWarnMs = System.currentTimeMillis();
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶配料在位但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 农艺炉灶配料在位但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
                 }
             }
         } else if (!AbstractFurnaceFuelCheck.isFuel(stove.getItem(4))) {
             // F-150：异物占燃料槽 → 停摆（return），WARN 带窗
             if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
                 noFuelLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶燃料槽为非燃料异物（{}），停摆待处理：{} @ {}", stove.getItem(4).getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 农艺炉灶燃料槽为非燃料异物（{}），停摆待处理：{} @ {}", stove.getItem(4).getItem(), request.id, pos);
             }
             return;
         }

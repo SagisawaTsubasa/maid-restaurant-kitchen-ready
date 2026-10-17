@@ -143,7 +143,7 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         } else {
             RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
             if (holder == null || !(holder.value() instanceof FlexStockpotRecipe recipe)) {
-                MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_stockpot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
+                MaidRestaurantCooking.LOGGER.error("[kitchen-ready] flex_stockpot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
                 return;
             }
             ResourceLocation soupBase = recipe.soupBase();
@@ -173,7 +173,7 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         } else {
             RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
             if (holder == null || !(holder.value() instanceof FlexStockpotRecipe recipe)) {
-                MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_stockpot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
+                MaidRestaurantCooking.LOGGER.error("[kitchen-ready] flex_stockpot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
                 return;
             }
             List<StackPredicate> required = new ArrayList<>(recipe.ingredients().stream().filter(s -> !s.isEmpty()).map(StackPredicate::new).toList());
@@ -205,7 +205,7 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         if (potResult != null && !potResult.isEmpty() && ownerCheck != null
                 && ownerCheck.value() instanceof FlexStockpotRecipe ownerRecipe
                 && potResult.getItem() != ownerRecipe.result().getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 汤锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 汤锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
             return;
         }
         if (pot.hasLid()) {
@@ -213,7 +213,7 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         } else {
             RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
             if (holder == null || !(holder.value() instanceof FlexStockpotRecipe recipe)) {
-                MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_stockpot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
+                MaidRestaurantCooking.LOGGER.error("[kitchen-ready] flex_stockpot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
                 return;
             }
             ItemStack carrier = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(recipe.carrier()), true);

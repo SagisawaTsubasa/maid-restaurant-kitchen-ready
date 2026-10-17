@@ -123,7 +123,7 @@ public class TeapotCookTask implements ICookTask {
     public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
         if (holder == null || !(holder.value() instanceof TeapotRecipe recipe)) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] teapot 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] teapot 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -144,7 +144,7 @@ public class TeapotCookTask implements ICookTask {
                 // F-118：壶内成品非本单茶时不动（防他单 brew 被本单取走计数）
                 ItemStack brewed = teapot.getResult();
                 if (!brewed.isEmpty() && brewed.getItem() != recipe.result().getItem()) {
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶内为非本单茶品（{}），不取：{} @ {}", brewed.getItem(), request.id, pos);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶内为非本单茶品（{}），不取：{} @ {}", brewed.getItem(), request.id, pos);
                     return;
                 }
                 if (teapot.takeTeapot(level, maid)) {
@@ -177,7 +177,7 @@ public class TeapotCookTask implements ICookTask {
                     // F-145/F-151：壶内输入为非本单原料（遗留物）——响出停摆（带窗），不覆盖
                     if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                         stallLastWarnMs = System.currentTimeMillis();
-                        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶内为非本单原料（{}），停摆待处理：{} @ {}", teapot.getInput().getItem(), request.id, pos);
+                        MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶内为非本单原料（{}），停摆待处理：{} @ {}", teapot.getInput().getItem(), request.id, pos);
                     }
                 }
                 // 注液+投料完毕：BE 自计时（需热源，isValidWorkBlock/searchWorkBlock 已过滤）
@@ -262,7 +262,7 @@ public class TeapotCookTask implements ICookTask {
         if (!(teapotItem.getItem() instanceof BlockItem blockItem)) {
             // 抽取前已验茶壶 BlockItem，此处纯防御：回包防吞
             com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, teapotItem);
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶放置防御分支触发，物品已回包 @ {}", pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶放置防御分支触发，物品已回包 @ {}", pos);
             return;
         }
         var fakePlayer = FakePlayerUtils.getPlayer(level);
@@ -271,11 +271,11 @@ public class TeapotCookTask implements ICookTask {
                 new net.minecraft.world.item.context.BlockPlaceContext(level, fakePlayer, InteractionHand.MAIN_HAND, teapotItem, hit);
         var result = blockItem.place(ctx);
         if (result.consumesAction()) {
-            MaidRestaurantCooking.LOGGER.debug("[xia-de-chu-fang] 女仆补放茶壶 @ {}", pos);
+            MaidRestaurantCooking.LOGGER.debug("[kitchen-ready] 女仆补放茶壶 @ {}", pos);
         } else {
             // F-102：place 失败（落位被占/状态拒绝）——已抽取的茶壶必须回包
             com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, teapotItem);
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶补放失败，物品已回包 @ {}", pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶补放失败，物品已回包 @ {}", pos);
         }
     }
 }

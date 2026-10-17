@@ -98,7 +98,7 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
         }
         BaseProcessingRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] freezer 请求配方缺失或类型不符：{}（{}）", request.id, getUID());
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] freezer 请求配方缺失或类型不符：{}（{}）", request.id, getUID());
             return;
         }
         // BaseProcessingRecipe 的 input/output 为 protected：走公开访问器
@@ -109,7 +109,7 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
         for (int i = 0; i < be.getContainerSize(); i++) {
             ItemStack scan = be.getItem(i);
             if (!scan.isEmpty() && scan.getItem() != output.getItem() && !inputIngredient.test(scan)) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰箱槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰箱槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }
         }
@@ -159,7 +159,7 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
             }
         }
         ItemUtils.getItemToLivingEntity(maid, take);
-        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] freezer 满槽放料失败，原料已回包：{}", request.id);
+        MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 满槽放料失败，原料已回包：{}", request.id);
     }
 
     /** 冰冻（下半）。 */

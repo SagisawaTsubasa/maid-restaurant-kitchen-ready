@@ -104,7 +104,7 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
         }
         FermentationBarrelRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] fermentation_barrel 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] fermentation_barrel 请求配方缺失或类型不符：{}", request.id);
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
@@ -113,7 +113,7 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
         ItemStack output = barrel.getItem(FermentationBarrelBlockEntity.OUTPUT_SLOT_GENERAL);
         ItemStack barrelExpect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() != barrelExpect.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 发酵桶输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
@@ -130,7 +130,7 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
                 && recipe.getIngredients().stream().noneMatch(ing -> ing.test(barrel.getItem(0)))) {
             if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                 stallLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶汁槽为非本单原料（{}），停摆待处理：{} @ {}", barrel.getItem(0).getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 发酵桶汁槽为非本单原料（{}），停摆待处理：{} @ {}", barrel.getItem(0).getItem(), request.id, pos);
             }
             return;
         }
@@ -154,7 +154,7 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
                 && bottleSlot.getItem() != net.satisfy.vinery.core.registry.ObjectRegistry.WINE_BOTTLE.get()) {
             if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                 stallLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶酒瓶槽为非酒瓶物品（{}），停摆待处理：{} @ {}", bottleSlot.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 发酵桶酒瓶槽为非酒瓶物品（{}），停摆待处理：{} @ {}", bottleSlot.getItem(), request.id, pos);
             }
             return;
         }
@@ -168,7 +168,7 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
                 maid.swing(InteractionHand.OFF_HAND);
             } else if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                 stallLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶等酒瓶但女仆无瓶，订单挂起：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 发酵桶等酒瓶但女仆无瓶，订单挂起：{} @ {}", request.id, pos);
             }
         }
     }

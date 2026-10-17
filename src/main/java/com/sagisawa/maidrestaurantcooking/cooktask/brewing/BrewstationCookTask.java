@@ -90,7 +90,7 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
         }
         net.satisfy.brewery.core.recipe.BrewingRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] brewstation 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] brewstation 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -104,7 +104,7 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
             } else {
                 // F-016：他单残留成品酒——交女仆不吞，但响出来便于发现混单
                 ItemUtils.getItemToLivingEntity(maid, beer);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] brewstation 取到非本单成品（可能他单残留）：{} @ {}", beer.getItem(), request.id);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] brewstation 取到非本单成品（可能他单残留）：{} @ {}", beer.getItem(), request.id);
             }
             return;
         }
@@ -122,7 +122,7 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
                 } else {
                     // F-013：投料被拒（槽满/不符）——原料回包
                     ItemUtils.getItemToLivingEntity(maid, take);
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 酿酒台投料被拒，原料回包：{} @ {}", request.id, pos);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 酿酒台投料被拒，原料回包：{} @ {}", request.id, pos);
                 }
             }
         }

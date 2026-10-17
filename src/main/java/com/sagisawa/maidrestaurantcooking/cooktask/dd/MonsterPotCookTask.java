@@ -141,7 +141,7 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
         }
         MonsterPotRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] monster_pot 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] monster_pot 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -149,7 +149,7 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
         ItemStack meal = pot.getMeal();
         if (!meal.isEmpty() && meal.getItem() != recipe.getResultItem(level.registryAccess()).getItem()) {
             // F-111：异物产出静默停摆 → 响出
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅内为非本单餐品（{}），请求停摆待人工处理：{} @ {}", meal.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 怪物锅内为非本单餐品（{}），请求停摆待人工处理：{} @ {}", meal.getItem(), request.id, pos);
             return;
         }
         if (!meal.isEmpty()) {
@@ -167,7 +167,7 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
             } else {
                 // F-162：容器不符（配方实际用其他容器）——碗退回女仆包并响出
                 ItemUtils.getItemToLivingEntity(maid, bowl);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅上菜容器被拒，碗已回包：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 怪物锅上菜容器被拒，碗已回包：{} @ {}", request.id, pos);
             }
             return;
         }
@@ -209,7 +209,7 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                     setBackoff(level, pos, 30_000L);
                     if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                         stallLastWarnMs = System.currentTimeMillis();
-                        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅配料槽满，原料回包待重试：{} @ {}", request.id, pos);
+                        MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 怪物锅配料槽满，原料回包待重试：{} @ {}", request.id, pos);
                 }
                 }
             }

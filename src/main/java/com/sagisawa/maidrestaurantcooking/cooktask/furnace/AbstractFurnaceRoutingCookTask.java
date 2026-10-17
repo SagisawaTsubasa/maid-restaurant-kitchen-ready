@@ -105,7 +105,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             }
             if (idPresentButWrongBe && System.currentTimeMillis() - misconfiguredLastWarnMs > 30_000L) {
                 misconfiguredLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标 {} 的 BE 非炉类（误配）：该类型挂起且不会回落原版炉：{}", target, getUID());
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉式路由目标 {} 的 BE 非炉类（误配）：该类型挂起且不会回落原版炉：{}", target, getUID());
             }
         }
         return !found.isEmpty() ? found.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get() : null;
@@ -141,7 +141,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         }
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
         if (holder == null || !recipeType().equals(holder.value().getType())) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] 炉式请求配方缺失或类型不符：{}（{}）", request.id, getUID());
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] 炉式请求配方缺失或类型不符：{}（{}）", request.id, getUID());
             return;
         }
         AbstractCookingRecipe recipe = (AbstractCookingRecipe) holder.value();
@@ -159,7 +159,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
 
         // F-125 前移：输出槽被异物占据 → WARN 停摆（取不走且续投无意义）
         if (!output.isEmpty() && output.getItem() != expectResult.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
 
@@ -171,7 +171,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                 && furnaceState.getValue(AbstractFurnaceBlock.LIT);
         if (!lit && !furnace.getItem(1).isEmpty() && !AbstractFurnaceBlockEntity.isFuel(furnace.getItem(1))) {
             // F-115：燃料槽被非燃料异物占据，本单燃料进不去——对称 F-005 响出
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉燃料槽为非燃料异物（{}）：{} @ {}", furnace.getItem(1).getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉燃料槽为非燃料异物（{}）：{} @ {}", furnace.getItem(1).getItem(), request.id, pos);
             return;
         }
 
@@ -180,7 +180,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         if (!input.isEmpty()) {
             boolean matches = recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(input));
             if (!matches) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉内存在非本单输入，请求可能无法完成：{} @ {}（炉内 {}）", request.id, pos, input.getItem());
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉内存在非本单输入，请求可能无法完成：{} @ {}（炉内 {}）", request.id, pos, input.getItem());
                 return;
             }
             if (!lit && furnace.getItem(1).isEmpty()) {
@@ -216,7 +216,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             maid.swing(InteractionHand.OFF_HAND);
         } else if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
             noFuelLastWarnMs = System.currentTimeMillis();
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
         }
     }
 

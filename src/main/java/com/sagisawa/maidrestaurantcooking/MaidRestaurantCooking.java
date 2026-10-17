@@ -36,13 +36,13 @@ public class MaidRestaurantCooking {
         modEventBus.addListener(this::commonSetup);
         // F-006：配置热重载时使炉式路由缓存失效（routingRules 改动即时生效）
         modEventBus.addListener(this::onConfigReload);
-        LOGGER.info("[xia-de-chu-fang] 女仆餐厅：下得厨房已加载（v{}）", modContainer.getModInfo().getVersion());
+        LOGGER.info("[kitchen-ready] 女仆餐厅：下得厨房已加载（v{}）", modContainer.getModInfo().getVersion());
     }
 
     private void onConfigReload(final net.neoforged.fml.event.config.ModConfigEvent.Reloading event) {
         if (event.getConfig().getModId().equals(MOD_ID)) {
             com.sagisawa.maidrestaurantcooking.config.FurnaceRouting.invalidate();
-            LOGGER.info("[xia-de-chu-fang] 配置重载，炉式路由缓存已失效重建");
+            LOGGER.info("[kitchen-ready] 配置重载，炉式路由缓存已失效重建");
         }
     }
 
@@ -55,18 +55,18 @@ public class MaidRestaurantCooking {
                     mine++;
                     var found = com.mastermarisa.maid_restaurant.utils.CookTasks.getTask(task.getType());
                     if (found == null) {
-                        LOGGER.error("[xia-de-chu-fang] 注册自检失败：任务 {}（type={}）未进入本体 taskMap——同键后到覆盖或冲刷异常！",
+                        LOGGER.error("[kitchen-ready] 注册自检失败：任务 {}（type={}）未进入本体 taskMap——同键后到覆盖或冲刷异常！",
                                 task.getUID(), task.getType());
                     } else if (found != task) {
                         // F-106：身份比对——同键被其他实例覆盖（他包/本体同 UID 任务）时亮出来
-                        LOGGER.warn("[xia-de-chu-fang] 注册自检：type {} 上实际生效 {}（本包 {} 被覆盖或为同 UID 任务）",
+                        LOGGER.warn("[kitchen-ready] 注册自检：type {} 上实际生效 {}（本包 {} 被覆盖或为同 UID 任务）",
                                 task.getType(), found.getUID(), task.getUID());
                     }
                 } catch (Exception e) {
-                    LOGGER.error("[xia-de-chu-fang] 注册自检异常（任务 {}）：{}", task.getUID(), e.toString());
+                    LOGGER.error("[kitchen-ready] 注册自检异常（任务 {}）：{}", task.getUID(), e.toString());
                 }
             }
-            LOGGER.info("[xia-de-chu-fang] 注册自检：本包任务 {} 个已冲刷核对", mine);
+            LOGGER.info("[kitchen-ready] 注册自检：本包任务 {} 个已冲刷核对", mine);
         });
     }
 }

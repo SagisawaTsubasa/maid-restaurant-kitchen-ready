@@ -40,7 +40,7 @@ public final class RecipeDataFilter {
             ans.add(d);
         }
         if (excluded > 0) {
-            MaidRestaurantCooking.LOGGER.debug("[xia-de-chu-fang] 点单菜单过滤：{} 条命中排除/关停（总 {}）", excluded, data.size());
+            MaidRestaurantCooking.LOGGER.debug("[kitchen-ready] 点单菜单过滤：{} 条命中排除/关停（总 {}）", excluded, data.size());
         }
         return ans;
     }

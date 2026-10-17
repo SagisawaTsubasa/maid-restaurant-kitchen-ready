@@ -122,7 +122,7 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
         }
         CuttingBoardSlicingRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] furniture_slicing 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] furniture_slicing 请求配方缺失或类型不符：{}", request.id);
             return;
         }
         // F-153/F-160：被占退避窗内直接返回——不抽料不放板，杜绝每 tick 抽还抖动（按站点键控）
@@ -141,12 +141,12 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
             // 放上即切（一刀一片，产物落地）；F-161：切片失败原料留板（在制态），WARN 记录
             boolean sliced = board.sliceItem(level, true);
             if (!sliced) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板切片未成（原料留板待重试）：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 家具砧板切片未成（原料留板待重试）：{} @ {}", request.id, pos);
             }
             if (sliced) {
                 maid.swing(InteractionHand.OFF_HAND);
                 // F-012：产物落地依赖女仆拾取 AI（真机 sweep C3 验证）
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板产物已落地待拾取：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 家具砧板产物已落地待拾取：{} @ {}", request.id, pos);
                 request.remain--;
             }
         } else {
@@ -155,7 +155,7 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
             setBackoff(level, pos, 30_000L);
             if (System.currentTimeMillis() - busyLastWarnMs > 30_000L) {
                 busyLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板被占，原料回包待重试：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 家具砧板被占，原料回包待重试：{} @ {}", request.id, pos);
         }
         }
     }

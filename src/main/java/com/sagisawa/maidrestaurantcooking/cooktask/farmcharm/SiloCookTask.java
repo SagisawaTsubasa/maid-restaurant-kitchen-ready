@@ -113,7 +113,7 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
         }
         SiloRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] silo 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] silo 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -129,7 +129,7 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
             // 非本配方产物（其他来源残留）：回塞；F-103 容量满时回包防吞
             if (!controller.tryAddItem(out)) {
                 ItemUtils.getItemToLivingEntity(maid, out);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 筒仓残留产物回塞失败（容量满），已回包：{} @ {}", out.getItem(), pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 筒仓残留产物回塞失败（容量满），已回包：{} @ {}", out.getItem(), pos);
             }
         }
 
@@ -140,7 +140,7 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
                 maid.swing(InteractionHand.OFF_HAND);
             } else {
                 ItemUtils.getItemToLivingEntity(maid, take);
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 筒仓已满，鲜料回包：{} @ {}", request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 筒仓已满，鲜料回包：{} @ {}", request.id, pos);
             }
         }
     }

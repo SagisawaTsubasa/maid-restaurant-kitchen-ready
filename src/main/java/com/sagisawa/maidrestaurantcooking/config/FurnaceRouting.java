@@ -66,26 +66,26 @@ public final class FurnaceRouting {
             String[] parts = eq < 0 ? null : new String[]{s.substring(0, eq).trim(), s.substring(eq + 1).trim()};
             if (parts == null || parts[0].isEmpty() || parts[1].isEmpty()) {
                 bad++;
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由规则非法（缺=或空段），已跳过：{}", s);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉式路由规则非法（缺=或空段），已跳过：{}", s);
                 continue;
             }
             ResourceLocation type = ResourceLocation.tryParse(parts[0]);
             ResourceLocation block = ResourceLocation.tryParse(parts[1]);
             if (type == null || block == null) {
                 bad++;
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由规则键解析失败（非法 ResourceLocation），已跳过：{}", s);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉式路由规则键解析失败（非法 ResourceLocation），已跳过：{}", s);
                 continue;
             }
             // F-133：目标方块 id 未注册（写错/模组未装）即时诊断，防运行期静默挂起
             if (!net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(block)) {
                 bad++;
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标方块未注册（写错或模组未装），已跳过：{}", s);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉式路由目标方块未注册（写错或模组未装），已跳过：{}", s);
                 continue;
             }
             ans.put(type.toString(), block);
         }
         if (bad > 0) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由共 {} 条非法规则被跳过，有效 {} 条", bad, ans.size());
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉式路由共 {} 条非法规则被跳过，有效 {} 条", bad, ans.size());
         }
         return Map.copyOf(ans);
     }

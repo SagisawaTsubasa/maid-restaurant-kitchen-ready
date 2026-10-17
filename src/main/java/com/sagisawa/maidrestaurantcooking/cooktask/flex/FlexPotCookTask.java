@@ -121,7 +121,7 @@ public class FlexPotCookTask extends PotCookTask {
             // byKeyTyped 在 1.21.1 为 private（本体自带 AT 才能用），用公开的 byKey + 类型校验
             RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
             if (holder == null || !(holder.value() instanceof FlexPotRecipe recipe)) {
-                MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_pot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
+                MaidRestaurantCooking.LOGGER.error("[kitchen-ready] flex_pot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
                 return;
             }
             List<StackPredicate> required = new ArrayList<>(recipe.ingredients().stream().filter(s -> !s.isEmpty()).map(StackPredicate::new).toList());
@@ -172,14 +172,14 @@ public class FlexPotCookTask extends PotCookTask {
         // F-126：配方缺失/类型不符时先 ERROR 出局——绝不在未核对归属的情况下取菜计数
         RecipeHolder<?> ownerCheck = level.getRecipeManager().byKey(request.id).orElse(null);
         if (ownerCheck == null || !(ownerCheck.value() instanceof FlexPotRecipe ownerRecipe)) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_pot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] flex_pot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
             return;
         }
         // F-121：锅在为玩家/他单煮制时成品非本单——不取（防异菜被本单计数）
         ItemStack potResult = pot.getResult();
         if (potResult != null && !potResult.isEmpty()
                 && potResult.getItem() != ownerRecipe.result().getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炒锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炒锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
             return;
         }
         if (pot.hasCarrier()) {

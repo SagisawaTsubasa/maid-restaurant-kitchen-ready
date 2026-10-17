@@ -93,7 +93,7 @@ public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe>
         }
         MincerRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] mincer 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] mincer 请求配方缺失或类型不符：{}", request.id);
             return;
         }
 
@@ -101,7 +101,7 @@ public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe>
         ItemStack output = mincer.getItem(1);
         ItemStack mincerExpect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() != mincerExpect.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 绞肉机输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 绞肉机输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty() && output.getItem() == recipe.getResultItem(level.registryAccess()).getItem()) {
@@ -128,7 +128,7 @@ public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe>
         // F-112：槽内物料非本单输入时不动摇柄（防摇异物耗材堵槽）
         if (state.getValue(MincerBlock.CRANK) == 0 && !mincer.getItem(0).isEmpty()) {
             if (!recipe.getInput().test(mincer.getItem(0))) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 绞肉机槽内为非本单物料（{}），不动摇柄：{} @ {}", mincer.getItem(0).getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 绞肉机槽内为非本单物料（{}），不动摇柄：{} @ {}", mincer.getItem(0).getItem(), request.id, pos);
                 return;
             }
             level.setBlock(pos, state.setValue(MincerBlock.CRANK, 8), 3);

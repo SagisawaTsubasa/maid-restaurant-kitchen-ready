@@ -97,7 +97,7 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
         }
         R recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] fridge 请求配方缺失或类型不符：{}（{}）", request.id, getUID());
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] fridge 请求配方缺失或类型不符：{}（{}）", request.id, getUID());
             return;
         }
         ItemStack result = resultOf(recipe);
@@ -106,7 +106,7 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
         // 输出槽有本配方产物 → 取走（F-121：异物产出响出）
         ItemStack output = fridge.getItem(outputSlot());
         if (!output.isEmpty() && output.getItem() != result.getItem()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰箱输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰箱输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
         if (!output.isEmpty() && output.getItem() == result.getItem()) {
@@ -123,7 +123,7 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
         if (!pending.isEmpty()) {
             if (!ingredient.test(pending) && System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                 stallLastWarnMs = System.currentTimeMillis();
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰箱输入槽为非本单原料（{}），停摆待处理：{} @ {}", pending.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰箱输入槽为非本单原料（{}），停摆待处理：{} @ {}", pending.getItem(), request.id, pos);
             }
             return;
         }

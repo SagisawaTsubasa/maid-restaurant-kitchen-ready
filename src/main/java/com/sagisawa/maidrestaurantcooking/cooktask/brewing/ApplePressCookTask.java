@@ -94,7 +94,7 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
         }
         ApplePressMashingRecipe recipe = resolveRecipe(level, request);
         if (recipe == null) {
-            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] apple_press 请求配方缺失或类型不符：{}", request.id);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] apple_press 请求配方缺失或类型不符：{}", request.id);
             return;
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
@@ -104,7 +104,7 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
             ItemStack scan = press.getItem(i);
             if (!scan.isEmpty() && scan.getItem() != expect.getItem()
                     && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 压榨机槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 压榨机槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }
         }
@@ -151,7 +151,7 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
                 }
                 if (!putIn) {
                     ItemUtils.getItemToLivingEntity(maid, take);
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] apple_press 满槽放料失败，原料已回包：{}", request.id);
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] apple_press 满槽放料失败，原料已回包：{}", request.id);
                 }
             }
         }
