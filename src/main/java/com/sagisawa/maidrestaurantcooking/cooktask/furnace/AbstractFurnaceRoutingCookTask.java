@@ -184,7 +184,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                 return;
             }
             if (!lit && furnace.getItem(1).isEmpty()) {
-                topUpFuel(level, maid, pos, furnace);
+                topUpFuel(level, maid, pos, furnace, request);
             }
             return;
         }
@@ -198,19 +198,25 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             maid.swing(InteractionHand.OFF_HAND);
             // 新投入的料需要燃料点燃（F-124：投料同 tick 即补火）
             if (!lit && furnace.getItem(1).isEmpty()) {
-                topUpFuel(level, maid, pos, furnace);
+                topUpFuel(level, maid, pos, furnace, request);
             }
         }
     }
 
-    /** 补 1 个燃料（调用方保证：!lit 且燃料槽空）。 */
-    private void topUpFuel(ServerLevel level, EntityMaid maid, BlockPos pos, AbstractFurnaceBlockEntity furnace) {
+    /** F-140：无燃料 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long noFuelLastWarnMs;
+
+    /** 补 1 个燃料（调用方保证：!lit 且燃料槽空）；女仆无燃料时响出（F-140：防订单静默永挂）。 */
+    private void topUpFuel(ServerLevel level, EntityMaid maid, BlockPos pos, AbstractFurnaceBlockEntity furnace, CookRequest request) {
         ItemStack fuel = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
                 StackPredicate.of(AbstractFurnaceBlockEntity::isFuel), true);
         if (!fuel.isEmpty()) {
             furnace.setItem(1, fuel);
             furnace.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
+        } else if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
+            noFuelLastWarnMs = System.currentTimeMillis();
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
         }
     }
 

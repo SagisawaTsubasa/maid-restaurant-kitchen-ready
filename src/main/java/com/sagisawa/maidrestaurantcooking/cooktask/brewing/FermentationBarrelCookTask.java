@@ -115,7 +115,12 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
             return;
         }
 
-        // 投汁（槽 0）与瓶（槽 4，配方要求时）
+        // 投汁（槽 0）与瓶（槽 4，配方要求时）；F-138：槽 0 异物（非空且非本单汁）→ WARN 停摆
+        if (!barrel.getItem(0).isEmpty()
+                && recipe.getIngredients().stream().noneMatch(ing -> ing.test(barrel.getItem(0)))) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶汁槽为非本单原料（{}），停摆待处理：{} @ {}", barrel.getItem(0).getItem(), request.id, pos);
+            return;
+        }
         for (var ingredient : recipe.getIngredients()) {
             if (ingredient.isEmpty() || ingredient.test(barrel.getItem(0))) {
                 continue;
