@@ -105,10 +105,10 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
         ItemStack output = recipe.getResultItem(level.registryAccess());
         Ingredient inputIngredient = recipe.getIngredients().isEmpty() ? Ingredient.EMPTY : recipe.getIngredients().get(0);
 
-        // F-121：先扫异物（非空且非本单产物 → 响出停摆）
+        // F-121+F-123：先扫异物（非产物且非本单原料 → 响出停摆）
         for (int i = 0; i < be.getContainerSize(); i++) {
             ItemStack scan = be.getItem(i);
-            if (!scan.isEmpty() && scan.getItem() != output.getItem()) {
+            if (!scan.isEmpty() && scan.getItem() != output.getItem() && !inputIngredient.test(scan)) {
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰箱槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }

@@ -81,7 +81,9 @@ public abstract class AbstractTimedContainerCookTask<R extends Recipe<?>> implem
     @SuppressWarnings("unchecked")
     protected R resolveRecipe(ServerLevel level, com.mastermarisa.maid_restaurant.request.CookRequest request) {
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
-        if (holder == null || !recipeClass().isInstance(holder.value())) {
+        // F-130：类匹配之外再校验 RecipeType 归属，防跨类型同名 id 错配
+        if (holder == null || !recipeClass().isInstance(holder.value())
+                || (recipeType() != null && !recipeType().equals(holder.value().getType()))) {
             return null;
         }
         return (R) holder.value();
