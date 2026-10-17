@@ -34,8 +34,32 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
     /** F-144：砧板被占 WARN 上次响出时间戳（30s 时间窗去重）。 */
     private volatile long busyLastWarnMs;
 
-    /** F-153：砧板被占退避截止时间（窗内不再抽还料，防每 tick 抖动）。 */
-    private volatile long busyBackoffUntilMs;
+    /** F-160：站点键控退避（任务实例跨维度共享，退避必须按 维度+坐标 区分；过期条目顺手清理）。 */
+    private record StationKey(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
+                              net.minecraft.core.BlockPos pos) {
+    }
+
+    private final java.util.concurrent.ConcurrentHashMap<StationKey, Long> backoffUntil = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean inBackoff(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos) {
+        StationKey key = new StationKey(level.dimension(), pos.immutable());
+        Long until = backoffUntil.get(key);
+        if (until != null && System.currentTimeMillis() < until) {
+            return true;
+        }
+        if (backoffUntil.size() > 64) {
+            long now = System.currentTimeMillis();
+            backoffUntil.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        return false;
+    }
+
+    private void setBackoff(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos, long durationMs) {
+        backoffUntil.put(new StationKey(level.dimension(), pos.immutable()),
+                System.currentTimeMillis() + durationMs);
+    }
+
+
 
     @Override
     public String getUID() {
@@ -101,8 +125,8 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
             MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] furniture_slicing 请求配方缺失或类型不符：{}", request.id);
             return;
         }
-        // F-153：被占退避窗内直接返回——不抽料不放板，杜绝每 tick 抽还抖动
-        if (System.currentTimeMillis() < busyBackoffUntilMs) {
+        // F-153/F-160：被占退避窗内直接返回——不抽料不放板，杜绝每 tick 抽还抖动（按站点键控）
+        if (inBackoff(level, pos)) {
             return;
         }
 
@@ -114,8 +138,12 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
         }
         if (board.placeItem(take)) {
             maid.swing(InteractionHand.OFF_HAND);
-            // 放上即切（一刀一片，产物落地）
-            if (board.sliceItem(level, true)) {
+            // 放上即切（一刀一片，产物落地）；F-161：切片失败原料留板（在制态），WARN 记录
+            boolean sliced = board.sliceItem(level, true);
+            if (!sliced) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板切片未成（原料留板待重试）：{} @ {}", request.id, pos);
+            }
+            if (sliced) {
                 maid.swing(InteractionHand.OFF_HAND);
                 // F-012：产物落地依赖女仆拾取 AI（真机 sweep C3 验证）
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板产物已落地待拾取：{} @ {}", request.id, pos);
@@ -124,7 +152,7 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
         } else {
             // F-144/F-153：板被占（他单在切）——还料+WARN（30s 窗）+设 30s 退避（窗内 cookTick 直接返回）
             ItemUtils.getItemToLivingEntity(maid, take);
-            busyBackoffUntilMs = System.currentTimeMillis() + 30_000L;
+            setBackoff(level, pos, 30_000L);
             if (System.currentTimeMillis() - busyLastWarnMs > 30_000L) {
                 busyLastWarnMs = System.currentTimeMillis();
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板被占，原料回包待重试：{} @ {}", request.id, pos);
