@@ -156,8 +156,17 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
         }
 
         // 搅拌驱动：STIRRING 静止且有配料 → 补搅
+        // F-139：碗内存在既非本单配料也非本单产物的遗留物时不驱动（防搅异物错计）
         BlockState state = level.getBlockState(pos);
         if (state.getValue(CraftingBowlBlock.STIRRING) == 0 && bowl.getItem(OUTPUT_SLOT).isEmpty()) {
+            for (int i = 0; i < OUTPUT_SLOT; i++) {
+                ItemStack scan = bowl.getItem(i);
+                if (!scan.isEmpty() && scan.getItem() != bowlExpect.getItem()
+                        && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 搅拌碗内存在异物（{}），不驱动：{} @ {}", scan.getItem(), request.id, pos);
+                    return;
+                }
+            }
             boolean anyInput = false;
             for (int i = 0; i < OUTPUT_SLOT; i++) {
                 if (!bowl.getItem(i).isEmpty()) {
