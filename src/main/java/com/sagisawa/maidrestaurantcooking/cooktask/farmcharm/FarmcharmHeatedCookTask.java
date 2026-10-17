@@ -50,10 +50,12 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
         ItemStack expect = recipe.getResultItem(level.registryAccess());
         List<Ingredient> ingredients = ingredientsOf(recipe);
 
-        // F-121：先扫异物——非空且非本单产物的槽存在即响出停摆（防静默+投料占槽）
+        // F-121+F-123：先扫异物——非空且非本单产物、也非本单配料的槽 → 响出停摆
+        List<Ingredient> scanIngredients = ingredientsOf(recipe);
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack scan = container.getItem(i);
-            if (!scan.isEmpty() && scan.getItem() != expect.getItem()) {
+            if (!scan.isEmpty() && scan.getItem() != expect.getItem()
+                    && scanIngredients.stream().noneMatch(ing -> ing.test(scan))) {
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] {} 槽位存在非本单产物（{}），停摆待处理：{} @ {}", getUID(), scan.getItem(), request.id, pos);
                 return;
             }

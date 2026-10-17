@@ -94,9 +94,19 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                 pos -> beCheck.test(pos) && BlockUsageManager.getUserCount(pos) <= 0
         );
         if (found.isEmpty() && target != null && !misconfiguredWarned) {
-            // F-122：路由目标无命中（大概率误配非炉类方块）——按任务一次性响出
-            misconfiguredWarned = true;
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标 {} 无可驱动炉 BE 命中（误配？该类型将挂起，不会回落原版炉）：{}", target, getUID());
+            // F-128：区分"方块在场但 BE 不符"（确凿误配，响出）与"方块未放置"（不误报）
+            boolean idPresentButWrongBe = false;
+            for (BlockPos p : BlockPos.withinManhattan(center, horizontalSearchRange, verticalSearchRange, horizontalSearchRange)) {
+                if (target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()))
+                        && !(level.getBlockEntity(p) instanceof AbstractFurnaceBlockEntity)) {
+                    idPresentButWrongBe = true;
+                    break;
+                }
+            }
+            if (idPresentButWrongBe) {
+                misconfiguredWarned = true;
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标 {} 的 BE 非炉类（误配）：该类型挂起且不会回落原版炉：{}", target, getUID());
+            }
         }
         return !found.isEmpty() ? found.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get() : null;
     }
@@ -147,26 +157,15 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             return;
         }
 
-        // 已有输入在炉内：匹配则等待，不匹配（异物）落 WARN（F-005：防永久静默等待）
-        ItemStack input = furnace.getItem(0);
-        if (!input.isEmpty()) {
-            boolean matches = recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(input));
-            if (!matches) {
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉内存在非本单输入，请求可能无法完成：{} @ {}（炉内 {}）", request.id, pos, input.getItem());}
+        // F-125 前移：输出槽被异物占据 → WARN 停摆（取不走且续投无意义）
+        if (!output.isEmpty() && output.getItem() != expectResult.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
             return;
         }
 
-        ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
-                StackPredicate.of(s -> recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(s))), true);
-        if (!take.isEmpty()) {
-            furnace.setItem(0, take);
-            furnace.setChanged();
-            maid.swing(InteractionHand.OFF_HAND);
-            return;
-        }
-
-        // 补燃料：炉未点燃且燃料槽为空（F-101：必须先验槽 1 空，防覆盖销毁既有燃料栈；
-        // LIT 读取前守卫方块类型，F-004 防 IAE）
+        // 补燃料：统一出口（F-124：输入等待/投料后也必须可达，否则炉内有料无火永挂）
+        // 条件：炉未点燃且燃料槽空（F-101 防覆盖销毁既有燃料栈）；燃料槽非燃料异物 → WARN（F-115）；
+        // LIT 读取前守卫方块类型（F-004 防 IAE）
         BlockState furnaceState = level.getBlockState(pos);
         boolean lit = furnaceState.getBlock() instanceof AbstractFurnaceBlock
                 && furnaceState.getValue(AbstractFurnaceBlock.LIT);
@@ -175,19 +174,43 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉燃料槽为非燃料异物（{}）：{} @ {}", furnace.getItem(1).getItem(), request.id, pos);
             return;
         }
-        if (!lit && furnace.getItem(1).isEmpty()) {
-            ItemStack outputCheck = furnace.getItem(2);
-            if (!outputCheck.isEmpty() && outputCheck.getItem() != expectResult.getItem()) {
-                // F-005：输出槽被异物占据，产物取不走且燃料白烧
-                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉输出槽被非本单产物占据：{} @ {}", request.id, pos);return;
+
+        // 已有输入在炉内：匹配则等待（先补燃料），不匹配（异物）落 WARN（F-005：防永久静默等待）
+        ItemStack input = furnace.getItem(0);
+        if (!input.isEmpty()) {
+            boolean matches = recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(input));
+            if (!matches) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉内存在非本单输入，请求可能无法完成：{} @ {}（炉内 {}）", request.id, pos, input.getItem());
+                return;
             }
-            ItemStack fuel = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
-                    StackPredicate.of(AbstractFurnaceBlockEntity::isFuel), true);
-            if (!fuel.isEmpty()) {
-                furnace.setItem(1, fuel);
-                furnace.setChanged();
-                maid.swing(InteractionHand.OFF_HAND);
+            if (!lit && furnace.getItem(1).isEmpty()) {
+                topUpFuel(level, maid, pos, furnace);
             }
+            return;
+        }
+
+        // 投料
+        ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
+                StackPredicate.of(s -> recipe.getIngredients().stream().anyMatch(i -> !i.isEmpty() && i.test(s))), true);
+        if (!take.isEmpty()) {
+            furnace.setItem(0, take);
+            furnace.setChanged();
+            maid.swing(InteractionHand.OFF_HAND);
+            // 新投入的料需要燃料点燃（F-124：投料同 tick 即补火）
+            if (!lit && furnace.getItem(1).isEmpty()) {
+                topUpFuel(level, maid, pos, furnace);
+            }
+        }
+    }
+
+    /** 补 1 个燃料（调用方保证：!lit 且燃料槽空）。 */
+    private void topUpFuel(ServerLevel level, EntityMaid maid, BlockPos pos, AbstractFurnaceBlockEntity furnace) {
+        ItemStack fuel = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
+                StackPredicate.of(AbstractFurnaceBlockEntity::isFuel), true);
+        if (!fuel.isEmpty()) {
+            furnace.setItem(1, fuel);
+            furnace.setChanged();
+            maid.swing(InteractionHand.OFF_HAND);
         }
     }
 

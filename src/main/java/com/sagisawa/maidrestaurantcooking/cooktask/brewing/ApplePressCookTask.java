@@ -99,10 +99,11 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
 
-        // F-121：先扫异物
+        // F-121+F-123：先扫异物（非产物且非本单原料 → 响出停摆）
         for (int i = 0; i < press.getContainerSize(); i++) {
             ItemStack scan = press.getItem(i);
-            if (!scan.isEmpty() && scan.getItem() != expect.getItem()) {
+            if (!scan.isEmpty() && scan.getItem() != expect.getItem()
+                    && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 压榨机槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
                 return;
             }

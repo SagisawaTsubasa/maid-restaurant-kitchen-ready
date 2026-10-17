@@ -50,7 +50,7 @@ public final class Config {
         builder.pop();
 
         builder.push("furnaceRouting")
-                .comment("炉式路由映射（M3 启用）：每行 \"源RecipeType键=目标工作方块id\"。留空 = 未启用。");
+                .comment("炉式路由映射（M3 启用）：每行 \"源RecipeType键=目标工作方块id\"。留空 = 路由到原版炉（默认行为；目标方块 BE 必须是炉类，见 FurnaceRouting 注释）。");
         FURNACE_ROUTING_RULES = builder
                 .defineList("routingRules", List.of(),
                         o -> o instanceof String s && !s.isBlank());
@@ -71,8 +71,10 @@ public final class Config {
 
     /** 排除判定：recipeKey（"命名空间:路径"）是否命中排除前缀。 */
     public static boolean isExcluded(String recipeKey) {
-        for (String prefix : EXCLUDED_RECIPE_PREFIXES.get()) {
-            if (recipeKey.startsWith(prefix)) {
+        for (String raw : EXCLUDED_RECIPE_PREFIXES.get()) {
+            // F-129：trim 用户配置，防前后空白使前缀静默失效
+            String prefix = raw == null ? "" : raw.trim();
+            if (!prefix.isEmpty() && recipeKey.startsWith(prefix)) {
                 return true;
             }
         }

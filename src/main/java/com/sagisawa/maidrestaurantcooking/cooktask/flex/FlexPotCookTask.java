@@ -169,21 +169,21 @@ public class FlexPotCookTask extends PotCookTask {
     }
 
     private void tickState2(ServerLevel level, EntityMaid maid, BlockPos pos, PotBlockEntity pot, CookRequest request) {
+        // F-126：配方缺失/类型不符时先 ERROR 出局——绝不在未核对归属的情况下取菜计数
+        RecipeHolder<?> ownerCheck = level.getRecipeManager().byKey(request.id).orElse(null);
+        if (ownerCheck == null || !(ownerCheck.value() instanceof FlexPotRecipe ownerRecipe)) {
+            MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_pot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
+            return;
+        }
         // F-121：锅在为玩家/他单煮制时成品非本单——不取（防异菜被本单计数）
         ItemStack potResult = pot.getResult();
-        RecipeHolder<?> ownerCheck = level.getRecipeManager().byKey(request.id).orElse(null);
-        if (potResult != null && !potResult.isEmpty() && ownerCheck != null
-                && ownerCheck.value() instanceof FlexPotRecipe ownerRecipe
+        if (potResult != null && !potResult.isEmpty()
                 && potResult.getItem() != ownerRecipe.result().getItem()) {
             MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炒锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
             return;
         }
         if (pot.hasCarrier()) {
-            RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
-            if (holder == null || !(holder.value() instanceof FlexPotRecipe recipe)) {
-                MaidRestaurantCooking.LOGGER.error("[xia-de-chu-fang] flex_pot 请求配方缺失或类型不符：{}（锅状态 {}）", request.id, pot.getStatus());
-                return;
-            }
+            FlexPotRecipe recipe = ownerRecipe;
             ItemStack carrier = ItemHandlerUtils.tryExtractSingleSlot(
                     maid.getAvailableInv(false), pot.getResult().getCount(), StackPredicate.of(recipe.carrier()), true
             );
