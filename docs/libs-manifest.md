@@ -71,6 +71,7 @@ Compile-only (compileOnly fileTree(libs)), never packaged; runtime comes from th
 | 乡野neoforge1.21.1-7.20.jar | 乡野neoforge1.21.1-7.20.jar | rtdd | OK |
 | 心之容器baubley-heart-canisters-1.21.1-1.4.3.jar | 心之容器baubley-heart-canisters-1.21.1-1.4.3.jar | bhc | OK |
 | 烟火凡人心flavor_immersed_daily-1.21.1-neoforge-2026.10.2.jar | 烟火凡人心flavor_immersed_daily-1.21.1-neoforge-2026.10.2.jar | flavor_immersed_daily | OK |
+| fidworkblock-1.0.0.jar | fidworkblock-1.0.0.jar | fidworkblock | OK |（M9 接入目标：灶台方块组 12 设备）
 | 饮酒作乐BrewinAndChewin-neoforge-4.5.0+1.21.1.jar | 饮酒作乐BrewinAndChewin-neoforge-4.5.0+1.21.1.jar | brewinandchewin | OK |
 | 灾变乐事lendersdelight-1.21.1-1.0.10b.jar | 灾变乐事lendersdelight-1.21.1-1.0.10b.jar | lendersdelight | OK |
 | (extras) hard dep chain | touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar | touhou_little_maid | OK |

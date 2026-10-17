@@ -55,8 +55,38 @@ import java.util.List;
  */
 public class CraftingTableCookTask implements ICookTask {
 
-    /** F-148 同款：回包/匹配失败 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long rollbackLastWarnMs;
+    /** F-169/F-170：窗口化日志键（消息码 → 窗口截止时刻），30s 窗去重防跨消息/20Hz 刷屏压制。 */
+    private final java.util.concurrent.ConcurrentHashMap<String, Long> logWindows = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long LOG_WINDOW_MS = 30_000L;
+    private static final int LOG_WINDOW_MAX = 64;
+
+    /** 30s 窗内同键只响一次；过期条目顺手清理（仿 F-160）。 */
+    private boolean shouldLog(String code) {
+        long now = System.currentTimeMillis();
+        Long until = logWindows.get(code);
+        if (until != null && now < until) {
+            return false;
+        }
+        if (logWindows.size() > LOG_WINDOW_MAX) {
+            logWindows.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        logWindows.put(code, now + LOG_WINDOW_MS);
+        return true;
+    }
+
+    /** F-169：窗口化 WARN（键=消息码，防跨消息压制）。 */
+    private void warnStall(String code, String format, Object... args) {
+        if (shouldLog(code)) {
+            MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] " + format, args);
+        }
+    }
+
+    /** F-170：ERROR 级窗口化（配方缺失/产物为空等每 tick 路径的 20Hz 刷屏防线）。 */
+    private void errorStall(String code, String format, Object... args) {
+        if (shouldLog(code)) {
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] " + format, args);
+        }
+    }
 
     @Override
     public String getUID() {
@@ -113,7 +143,7 @@ public class CraftingTableCookTask implements ICookTask {
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
         if (holder == null || !RecipeType.CRAFTING.equals(holder.value().getType())
                 || !(holder.value() instanceof CraftingRecipe recipe)) {
-            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] 合成台请求配方缺失或类型不符：{}", request.id);
+            errorStall("crafting-recipe-missing:" + request.id, "合成台请求配方缺失或类型不符：{} @ {}", request.id, pos);
             return;
         }
 
@@ -142,7 +172,7 @@ public class CraftingTableCookTask implements ICookTask {
                 rollback(maid, extracted);
                 // 首格即缺 = 普通缺料静默等待；中途缺 = 库存有零头不够一份，响出（30s 窗）
                 if (!extracted.isEmpty()) {
-                    warnOnce("[kitchen-ready] 合成台配料中途缺料，已抽原料回包等待补货：{} @ {}", request.id, pos);
+                    warnStall("crafting-partial-missing", "合成台配料中途缺料，已抽原料回包等待补货：{} @ {}", request.id, pos);
                 }
                 return;
             }
@@ -159,14 +189,14 @@ public class CraftingTableCookTask implements ICookTask {
         // matches 安全门（F-130/131 同款纪律：不符必须响，不静默装正常）
         if (!recipe.matches(input, level)) {
             rollback(maid, extracted);
-            warnOnce("[kitchen-ready] 合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{}", request.id, pos);
+            warnStall("crafting-matches-fail", "合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{} @ {}", request.id, pos);
             return;
         }
 
         ItemStack result = recipe.assemble(input, level.registryAccess());
         if (result.isEmpty()) {
             rollback(maid, extracted);
-            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] 合成台配方产物为空，原料已回包：{}", request.id);
+            errorStall("crafting-result-empty", "合成台配方产物为空，原料已回包：{} @ {}", request.id, pos);
             return;
         }
         ItemUtils.getItemToLivingEntity(maid, result);
@@ -186,13 +216,6 @@ public class CraftingTableCookTask implements ICookTask {
     private void rollback(EntityMaid maid, List<ItemStack> extracted) {
         for (ItemStack stack : extracted) {
             ItemUtils.getItemToLivingEntity(maid, stack);
-        }
-    }
-
-    private void warnOnce(String format, Object id, BlockPos pos) {
-        if (System.currentTimeMillis() - rollbackLastWarnMs > 30_000L) {
-            rollbackLastWarnMs = System.currentTimeMillis();
-            MaidRestaurantCooking.LOGGER.warn(format, id, pos);
         }
     }
 
