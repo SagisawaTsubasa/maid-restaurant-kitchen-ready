@@ -36,6 +36,9 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
 
     private static final int OUTPUT_SLOT = 4;
 
+    /** F-147：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long stallLastWarnMs;
+
     @Override
     public String getUID() {
         return "CraftingBowlCookTask";
@@ -163,7 +166,10 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
                 ItemStack scan = bowl.getItem(i);
                 if (!scan.isEmpty() && scan.getItem() != bowlExpect.getItem()
                         && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 搅拌碗内存在异物（{}），不驱动：{} @ {}", scan.getItem(), request.id, pos);
+                    if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                        stallLastWarnMs = System.currentTimeMillis();
+                        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 搅拌碗内存在异物（{}），不驱动：{} @ {}", scan.getItem(), request.id, pos);
+                    }
                     return;
                 }
             }

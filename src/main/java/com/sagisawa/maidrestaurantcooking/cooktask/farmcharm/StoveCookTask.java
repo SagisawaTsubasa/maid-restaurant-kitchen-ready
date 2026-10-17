@@ -29,6 +29,9 @@ import java.util.function.Predicate;
  */
 public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
 
+    /** F-142：无燃料 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long noFuelLastWarnMs;
+
     @Override
     public String getUID() {
         return "FarmcharmStoveCookTask";
@@ -62,7 +65,11 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
         StoveRecipe recipe = (StoveRecipe) recipeHolder.value();
-        return recipe.getIngredients().stream().filter(i -> !i.isEmpty()).map(StackPredicate::new).toList();
+        // F-142：燃料进取料单（女仆会主动去取的物品语义，对照 TeaKettle 水/燃料先例）
+        java.util.List<StackPredicate> ans = new java.util.ArrayList<>(recipe.getIngredients().stream()
+                .filter(i -> !i.isEmpty()).map(StackPredicate::new).toList());
+        ans.add(StackPredicate.of(AbstractFurnaceFuelCheck::isFuel));
+        return ans;
     }
 
     @Override
@@ -112,7 +119,7 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
             return;
         }
 
-        // 补燃料
+        // 补燃料（F-142：无燃料 30s 窗 WARN 防订单静默永挂；燃料槽异物对称 F-115 响出）
         if (stove.getItem(4).isEmpty()) {
             ItemStack fuel = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
                     StackPredicate.of(AbstractFurnaceFuelCheck::isFuel), true);
@@ -120,7 +127,12 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
                 stove.setItem(4, fuel);
                 stove.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
+            } else if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
+                noFuelLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
             }
+        } else if (!AbstractFurnaceFuelCheck.isFuel(stove.getItem(4))) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 农艺炉灶燃料槽为非燃料异物（{}）：{} @ {}", stove.getItem(4).getItem(), request.id, pos);
         }
 
         // 投配料
