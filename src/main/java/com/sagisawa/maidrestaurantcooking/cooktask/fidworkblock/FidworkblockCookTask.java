@@ -539,14 +539,15 @@ public class FidworkblockCookTask implements ICookTask {
         List<ItemStack> supply = new ArrayList<>();
         for (int i = 0; i < outputSlot; i++) {
             if (!inv.getStackInSlot(i).isEmpty()) {
-                supply.add(inv.getStackInSlot(i));
+                // F-188：按数量展平为单件——槽内堆叠（单槽多件）不低计供应
+                supply.add(inv.getStackInSlot(i).copyWithCount(1));
             }
         }
         boolean[] used = new boolean[supply.size()];
         List<Ingredient> need = requiredIngredients(recipe);
         List<Ingredient> missing = findMissing(supply, used, need);
         if (hasForeignItem(supply, used)) {
-            rollbackSealed(maid, inv, outputSlot);
+            rollbackSealed(maid, inv, outputSlot, setChanged);
             warnStall("residue:" + name, pos, "fidworkblock {} 台面存在与本单不符的料，已退料回包：{} @ {}", name, request.id, pos);
             return;
         }
@@ -560,6 +561,7 @@ public class FidworkblockCookTask implements ICookTask {
                 // F-178：走 BE 自己的投料口（内含槽位角色判定）并核 remainder（防吞料 F-174 同族）
                 ItemStack remainder = addItem.apply(take);
                 if (!remainder.isEmpty()) {
+                    setChanged.run(); // F-186：本 tick 已成功投入的部分先置脏再退
                     ItemUtils.getItemToLivingEntity(maid, remainder);
                     warnStall("insert-reject:" + name, pos, "fidworkblock {} 投料被拒（{}），原料已回包：{} @ {}",
                             name, remainder.getItem(), request.id, pos);
@@ -576,19 +578,24 @@ public class FidworkblockCookTask implements ICookTask {
             setChanged.run();
         } else {
             // 按配方投满但 checkRecipe 仍 false：全部退料回包 + 响出
-            rollbackSealed(maid, inv, outputSlot);
+            rollbackSealed(maid, inv, outputSlot, setChanged);
             warnStall("check-fail:" + name, pos, "fidworkblock {} 按配方投料后 checkRecipe 失败，已退料回包：{} @ {}", name, request.id, pos);
         }
     }
 
-    /** 密封系退料回包：输入区 [0,outputSlot) 逐槽清空交还女仆（F-166：不触碰输出区）。 */
-    private void rollbackSealed(EntityMaid maid, ItemStackHandler inv, int outputSlot) {
+    /** 密封系退料回包：输入区 [0,outputSlot) 逐槽清空交还女仆（F-166：不触碰输出区；F-186：清槽后置脏）。 */
+    private void rollbackSealed(EntityMaid maid, ItemStackHandler inv, int outputSlot, Runnable setChanged) {
+        boolean cleared = false;
         for (int i = 0; i < outputSlot; i++) {
             ItemStack slotStack = inv.getStackInSlot(i);
             if (!slotStack.isEmpty()) {
                 inv.setStackInSlot(i, ItemStack.EMPTY);
                 ItemUtils.getItemToLivingEntity(maid, slotStack);
+                cleared = true;
             }
+        }
+        if (cleared) {
+            setChanged.run();
         }
     }
 
@@ -627,7 +634,7 @@ public class FidworkblockCookTask implements ICookTask {
         List<ItemStack> supply = new ArrayList<>();
         for (int i = 0; i < inputSlots; i++) {
             if (!c.getItem(inputStart + i).isEmpty()) {
-                supply.add(c.getItem(inputStart + i));
+                supply.add(c.getItem(inputStart + i).copyWithCount(1)); // F-188：展平单件
             }
         }
         boolean[] used = new boolean[supply.size()];
@@ -676,6 +683,11 @@ public class FidworkblockCookTask implements ICookTask {
             c.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
         }
+        // F-187：输入区已配齐但进度恒 0（模式/前置不满足）→ 响出防静默永挂（窗口化 30s）
+        if (missing.isEmpty() && !supply.isEmpty() && c.getCookingProgress() <= 0) {
+            warnStall("stove-not-cooking", pos, "fidworkblock 炉灶输入区已配齐但未开始加工（设备模式/前置未满足？）：{} @ {}",
+                    request.id, pos);
+        }
         // serverTick 自转化（minHeat=0 无需热源）；产物由取货分支完成
     }
 
@@ -684,7 +696,12 @@ public class FidworkblockCookTask implements ICookTask {
     private void tickWok(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request,
                          CookingRecipe recipe, WokBlockEntity w) {
         List<Ingredient> need = requiredIngredients(recipe);
-        List<ItemStack> stored = new ArrayList<>(w.getStoredItems());
+        List<ItemStack> stored = new ArrayList<>();
+        for (ItemStack stack : w.getStoredItems()) {
+            if (!stack.isEmpty()) {
+                stored.add(stack.copyWithCount(1)); // F-188：展平单件
+            }
+        }
         boolean[] used = new boolean[stored.size()];
         List<Ingredient> missing = findMissing(stored, used, need);
 
@@ -723,7 +740,12 @@ public class FidworkblockCookTask implements ICookTask {
         }
         // 收锅前配方自校验（F-161b：finishCooking 无成功标志——javap void；命中即配方 result，
         // 未命中走程序化菜=错菜。此处投料按配方+异物已排除，双保险校验）
-        List<ItemStack> finalCheck = new ArrayList<>(w.getStoredItems());
+        List<ItemStack> finalCheck = new ArrayList<>();
+        for (ItemStack stack : w.getStoredItems()) {
+            if (!stack.isEmpty()) {
+                finalCheck.add(stack.copyWithCount(1)); // F-188：展平单件
+            }
+        }
         boolean[] checkUsed = new boolean[finalCheck.size()];
         List<Ingredient> stillMissing = findMissing(finalCheck, checkUsed, need);
         if (!stillMissing.isEmpty() || hasForeignItem(finalCheck, checkUsed)) {
@@ -795,6 +817,7 @@ public class FidworkblockCookTask implements ICookTask {
             ItemStack out = fp.getInventory().extractItem(FryingpanBlockEntity.OUTPUT_SLOT,
                     fp.getOutputItem().getCount(), false);
             if (!out.isEmpty()) {
+                fp.setChanged(); // F-186：与炉灶系取货对称
                 ItemUtils.getItemToLivingEntity(maid, out);
                 request.remain--;
                 maid.swing(InteractionHand.OFF_HAND);
@@ -853,8 +876,12 @@ public class FidworkblockCookTask implements ICookTask {
         if (fp.hasOil() && fp.hasIngredient() && fp.startFrying()) {
             fp.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
+        } else if (fp.hasOil() && fp.hasIngredient()) {
+            // F-187：投满却不启动（油量<料数等），响出防静默永挂（与压榨机 start-fail 对称）
+            warnStall("start-fail:fryingpan", pos, "fidworkblock 炸锅启动条件未齐（油={} 料={}），订单挂起：{} @ {}",
+                    fp.getOilCount(), fp.getIngredientItem().getCount(), request.id, pos);
         }
-        // startFrying false = 油量不足等条件未齐：料油留位，下 tick 重试（条件达成即启动）
+        // startFrying false 且料/油未齐 = 正常等待路径（上方投料分支已处理）
     }
 
     // ═══ 即时系（mortar）═══
