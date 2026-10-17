@@ -232,5 +232,12 @@ description='''
     ordering="AFTER"
     side="BOTH"
 
+[[dependencies.${mod_id}]]
+    modId="fidworkblock"
+    type="optional"
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
 [[mixins]]
 config = "maid_restaurant_cooking.mixins.json"

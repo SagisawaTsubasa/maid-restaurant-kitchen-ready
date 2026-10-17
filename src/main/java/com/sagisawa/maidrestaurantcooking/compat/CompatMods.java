@@ -48,6 +48,8 @@ public final class CompatMods {
     /** 乡野（jar 名 乡野neoforge…，注册 id rtdd）。 */
     public static final boolean RTDD = ModList.get().isLoaded("rtdd");
     public static final boolean TIDE = ModList.get().isLoaded("tide");
+    /** 烟火凡人心灶台方块组（fidworkblock，12 设备共享 fidworkblock:cooking 类型；M9）。 */
+    public static final boolean FIDWORKBLOCK = ModList.get().isLoaded("fidworkblock");
 
     private CompatMods() {
     }
@@ -88,6 +90,7 @@ public final class CompatMods {
         optional.put("dungeonsdelight", DUNGEONSDELIGHT);
         optional.put("rtdd(乡野)", RTDD);
         optional.put("tide", TIDE);
+        optional.put("fidworkblock", FIDWORKBLOCK);
         long on = optional.values().stream().filter(Boolean::booleanValue).count();
         StringBuilder sb = new StringBuilder();
         optional.forEach((k, v) -> sb.append(v ? '+' : '-').append(k).append(' '));

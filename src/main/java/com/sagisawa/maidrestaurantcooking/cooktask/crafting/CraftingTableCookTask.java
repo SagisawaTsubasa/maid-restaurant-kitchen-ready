@@ -1,0 +1,214 @@
+package com.sagisawa.maidrestaurantcooking.cooktask.crafting;
+
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.mastermarisa.maid_restaurant.api.ICookTask;
+import com.mastermarisa.maid_restaurant.request.CookRequest;
+import com.mastermarisa.maid_restaurant.utils.BlockUsageManager;
+import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
+import com.mastermarisa.maid_restaurant.utils.SearchUtils;
+import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
+import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
+import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.config.Config;
+import com.sagisawa.maidrestaurantcooking.utils.RecipeDataFilter;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.CraftingTableBlock;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * M8 合成台食物合成任务（minecraft:crafting，shaped+shapeless 单一类型覆盖）。
+ *
+ * <p>设计（2026-10-18 实证定稿，证据=gradle 缓存 neoform 反编译源码）：
+ * <ul>
+ *   <li>原版仅单一 {@code RecipeType.CRAFTING}：ShapedRecipe/ShapelessRecipe 均不覆盖
+ *       getType()，一个任务类吃两类配方（本体 0.2.9 与已核对生态 jar 均未注册 CRAFTING，
+ *       无同键覆盖；maidtavern/fox_trot_brew 不在本机 libs，残余风险由真机菜单验证兜底）。</li>
+ *   <li>工作方块 = 原版合成台（CraftingTableBlock，无 BlockEntity）：纯方块状态判定
+ *       （茶壶补放位先例），盒扫 + BlockUsageManager 占用过滤取最近。</li>
+ *   <li>匹配免容器：直接构造 {@code CraftingInput.of(w, h, layout)}——工厂内部恒做
+ *       最小包围盒裁剪（ofPositioned），shaped 按配方（JSON 已 shrink 的 w×h，空白=
+ *       Ingredient.EMPTY）原位摆放，shapeless 在 3×3 内任意散放（matches 走
+ *       stackedContents.canCraft，与位置无关）。</li>
+ *   <li>无中间容器：抽取→构造→matches 安全门→assemble→交付全部在单次 cookTick 内
+ *       完成，无跨 tick 状态；失败路径（中途缺料/matches 不符）已抽原料全部回包。</li>
+ *   <li>菜单口径：产物含 FOOD 组件（DataComponents.FOOD，1.21.1 判据同炉式族）；
+ *       craftingTable.enabled 运行时消费（构造期 config 未加载禁 .get()）。</li>
+ * </ul>
+ */
+public class CraftingTableCookTask implements ICookTask {
+
+    /** F-148 同款：回包/匹配失败 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long rollbackLastWarnMs;
+
+    @Override
+    public String getUID() {
+        return "CraftingTableCookTask";
+    }
+
+    @Override
+    public ItemStack getIcon() {
+        return new ItemStack(Items.CRAFTING_TABLE);
+    }
+
+    @Override
+    public RecipeType<?> getType() {
+        return RecipeType.CRAFTING;
+    }
+
+    @Override
+    public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
+        if (!(recipeHolder.value() instanceof CraftingRecipe recipe)) {
+            return List.of();
+        }
+        return recipe.getIngredients().stream().filter(i -> !i.isEmpty()).map(StackPredicate::new).toList();
+    }
+
+    @Nullable
+    @Override
+    public BlockPos searchWorkBlock(ServerLevel level, EntityMaid maid, int horizontalSearchRange, int verticalSearchRange) {
+        BlockPos center = maid.getBrainSearchPos();
+        List<BlockPos> found = SearchUtils.search(center, horizontalSearchRange, verticalSearchRange,
+                pos -> level.getBlockState(pos).getBlock() instanceof CraftingTableBlock
+                        && BlockUsageManager.getUserCount(pos) <= 0);
+        return found.isEmpty() ? null
+                : found.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get();
+    }
+
+    @Override
+    public boolean isValidWorkBlock(ServerLevel level, EntityMaid maid, BlockPos pos) {
+        return level.getBlockState(pos).getBlock() instanceof CraftingTableBlock;
+    }
+
+    @Override
+    public List<ItemStack> getCurrentInput(Level level, BlockPos pos, EntityMaid maid) {
+        // 合成台无存储容器，无在工位内容物
+        return List.of();
+    }
+
+    @Override
+    public List<StackPredicate> getKitchenWares() {
+        return List.of();
+    }
+
+    @Override
+    public void cookTick(ServerLevel level, EntityMaid maid, BlockPos pos, CookRequest request) {
+        RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
+        if (holder == null || !RecipeType.CRAFTING.equals(holder.value().getType())
+                || !(holder.value() instanceof CraftingRecipe recipe)) {
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] 合成台请求配方缺失或类型不符：{}", request.id);
+            return;
+        }
+
+        // 抽料布局：shaped 按配方网格原位摆放；shapeless 紧凑散放于 3×3 前段
+        // （canCraft 与位置无关，紧凑排布保证 ofPositioned 裁剪出连续包围盒）。
+        NonNullList<Ingredient> ingredients = recipe.getIngredients();
+        ShapedRecipe shapedRecipe = recipe instanceof ShapedRecipe sr ? sr : null;
+        boolean shaped = shapedRecipe != null;
+        int w = shaped ? shapedRecipe.getWidth() : 3;
+        int h = shaped ? shapedRecipe.getHeight() : 3;
+
+        List<ItemStack> extracted = new ArrayList<>();
+        List<ItemStack> layout = new ArrayList<>(w * h);
+        for (int i = 0; i < w * h; i++) {
+            layout.add(ItemStack.EMPTY);
+        }
+        int cursor = 0;
+        for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
+            Ingredient ingredient = ingredients.get(idx);
+            if (ingredient.isEmpty()) {
+                continue;
+            }
+            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
+                    StackPredicate.of(ingredient), true);
+            if (take.isEmpty()) {
+                rollback(maid, extracted);
+                // 首格即缺 = 普通缺料静默等待；中途缺 = 库存有零头不够一份，响出（30s 窗）
+                if (!extracted.isEmpty()) {
+                    warnOnce("[kitchen-ready] 合成台配料中途缺料，已抽原料回包等待补货：{} @ {}", request.id, pos);
+                }
+                return;
+            }
+            extracted.add(take);
+            layout.set(shaped ? idx : cursor++, take);
+        }
+        if (extracted.isEmpty()) {
+            // 一格都没抽到 = 女仆包里没料：静默等待（对齐 CraftingBowl 缺料行为）
+            return;
+        }
+
+        CraftingInput input = CraftingInput.of(w, h, layout);
+
+        // matches 安全门（F-130/131 同款纪律：不符必须响，不静默装正常）
+        if (!recipe.matches(input, level)) {
+            rollback(maid, extracted);
+            warnOnce("[kitchen-ready] 合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{}", request.id, pos);
+            return;
+        }
+
+        ItemStack result = recipe.assemble(input, level.registryAccess());
+        if (result.isEmpty()) {
+            rollback(maid, extracted);
+            MaidRestaurantCooking.LOGGER.error("[kitchen-ready] 合成台配方产物为空，原料已回包：{}", request.id);
+            return;
+        }
+        ItemUtils.getItemToLivingEntity(maid, result);
+
+        // 容器返还（牛奶桶→空桶等）：1.21.1 Recipe.getRemainingItems(input) 无 Level 参数
+        for (ItemStack remainder : recipe.getRemainingItems(input)) {
+            if (!remainder.isEmpty()) {
+                ItemUtils.getItemToLivingEntity(maid, remainder);
+            }
+        }
+
+        request.remain--;
+        maid.swing(InteractionHand.OFF_HAND);
+    }
+
+    /** 已抽原料回包（满槽/缺料/matches 失败共用收口）。 */
+    private void rollback(EntityMaid maid, List<ItemStack> extracted) {
+        for (ItemStack stack : extracted) {
+            ItemUtils.getItemToLivingEntity(maid, stack);
+        }
+    }
+
+    private void warnOnce(String format, Object id, BlockPos pos) {
+        if (System.currentTimeMillis() - rollbackLastWarnMs > 30_000L) {
+            rollbackLastWarnMs = System.currentTimeMillis();
+            MaidRestaurantCooking.LOGGER.warn(format, id, pos);
+        }
+    }
+
+    @Override
+    public List<RecipeData> getAllRecipeData(Level level) {
+        if (!Config.CRAFTING_TABLE_ENABLED.get()) {
+            return List.of();
+        }
+        List<RecipeData> ans = new ArrayList<>();
+        for (RecipeHolder<CraftingRecipe> holder : level.getRecipeManager().getAllRecipesFor(RecipeType.CRAFTING)) {
+            ItemStack result = holder.value().getResultItem(level.registryAccess());
+            // 食物过滤：仅可食产物进点单（同炉式族 FOOD 组件判据）
+            if (!result.isEmpty() && result.has(DataComponents.FOOD)) {
+                ans.add(new RecipeData(holder.id(), RecipeType.CRAFTING, this.getIcon(), result));
+            }
+        }
+        return RecipeDataFilter.apply(ans);
+    }
+}

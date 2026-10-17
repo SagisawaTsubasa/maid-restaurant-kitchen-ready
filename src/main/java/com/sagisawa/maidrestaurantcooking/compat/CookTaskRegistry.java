@@ -6,6 +6,7 @@ import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
 import com.sagisawa.maidrestaurantcooking.cooktask.bakeries.FermentationBoxCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.ChinesefoodFreezerCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.chinesefood.PickleJarCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.crafting.CraftingTableCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.CraftingBowlCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.FarmcharmHeatedCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.MincerCookTask;
@@ -19,6 +20,7 @@ import com.sagisawa.maidrestaurantcooking.cooktask.brewing.PalmBarCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.furniture.FurnitureSlicingCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.StoveCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
+import com.sagisawa.maidrestaurantcooking.cooktask.fidworkblock.FidworkblockCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.furnace.FurnaceRoutingCookTasks;
 import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexStockpotCookTask;
@@ -120,6 +122,15 @@ public final class CookTaskRegistry {
         registerTask(new FurnaceRoutingCookTasks.Smelting());
         registerTask(new FurnaceRoutingCookTasks.Smoking());
         registerTask(new FurnaceRoutingCookTasks.Blasting());
+
+        // M8 合成台（原版类型，无门控；shaped+shapeless 单一 CRAFTING 类型，FOOD 过滤出菜单；
+        // 本体 0.2.9 与已核对生态 jar 均未注册 CRAFTING，无同键覆盖）
+        registerTask(new CraftingTableCookTask());
+
+        // M9 烟火凡人心灶台方块组（单类型 12 设备按 appliance 分流；steambox 边界不接）
+        if (CompatMods.FIDWORKBLOCK) {
+            registerTask(new FidworkblockCookTask());
+        }
 
         MaidRestaurantCooking.LOGGER.info("[kitchen-ready] CookTask 构造期入队完成（门控分流后）");
     }
