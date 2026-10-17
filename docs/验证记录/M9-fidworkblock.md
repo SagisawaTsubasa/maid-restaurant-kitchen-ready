@@ -36,7 +36,7 @@
 
 ## 实现
 
-- `FidworkblockCookTask implements ICookTask`：单任务类，cookTick 按 appliance 分七驱动策略（炉灶自走/自走/密封/翻炒/工具/燃油/即时）；searchWorkBlock 经 `RequestManager.peek(maid, 0)`（本体 OvenCookTask 先例）取当前订单→解析 appliance→按方块 id 寻址+空闲过滤（isIdleForSearch：加工中/已密封/有产出不接新单）；isValidWorkBlock 只验设备身份（受理中工位不因 busy 失效，防中途换工位丢状态）。
+- `FidworkblockCookTask implements ICookTask`：单任务类，cookTick 按 appliance 分七驱动策略（炉灶自走/自走/密封/翻炒/工具/燃油/即时）；searchWorkBlock 经 `RequestManager.peek(maid, 0)`（本体 OvenCookTask 先例）取当前订单→解析 appliance→按方块 id 寻址+空闲过滤（isIdleForSearch：加工中/已密封/有产出不接新单）；isValidWorkBlock 三段判据：设备身份白名单 → peek 宽容（无单放行）→ 配方可解析且工位与订单 appliance 同型（F-162/F-184）；受理中工位不因 busy 失效，防中途换工位丢状态。
 - `getAllRecipeData`：只收录 DRIVEN_APPLIANCES 且产物含 FOOD 组件（研钵砂砾/土膏等非食品天然被滤）。
 - 门控：CompatMods.FIDWORKBLOCK（modId 实测自其 neoforge.mods.toml）+ mods.toml optional + logGates。
 
@@ -76,6 +76,25 @@
 | c. removeItem 置脏 | 仅在槽清空时 setChanged（vanilla ContainerHelper.removeItem 模式）→ F-173 取货侧对称补 setChanged 必要 | AbstractCookingBlockEntity javap -c |
 | d. finishCooking 返回 | void（无成功标志）→ F-161 收锅校验用配方自校验实现 | WokBlockEntity javap |
 | e. processWithTool 损刀 | 原地：processWithTool 把传入 tool 经 doProcess 直调 ItemStack.hurtAndBreak（原版 @Nullable ServerPlayer 判空） | ChoppingboardBlockEntity javap -c |
+
+### R3（复验，6 发现：P2×0——收口达成，P3×6 收口轮顺手修）
+
+- **F-185**：真机操作单三条结构性无效用例改写（E1 蛋糕无 FOOD 组件不进菜单→换用例；E4 拆双方向；F8 改菜单检查）。
+- **F-186**：置脏纪律对称化——rollbackSealed 清槽置脏、F-178 提前 return 先置脏、炸锅取货补 fp.setChanged（待确认 b 实证：JarBlockEntity$1 覆写 onContentsChanged→setChanged，复制风险实际不存在，本条为纪律对齐）。
+- **F-187**：炸锅 startFrying false 与炉灶「配齐但进度恒 0」补窗口化 WARN（防静默永挂；待确认 d 实证：canCook 只查 minHeat+输出槽，不依赖 mode）。
+- **F-188**：计数式核对 supply 按数量展平（copyWithCount(1)，单槽多件不低计；待确认 c 实证：addItemToNextSlot 走 ItemStackHandler.insertItem 默认堆叠语义，堆叠可达）。
+- **F-189**：M9 记录 isValidWorkBlock 三段判据口径同步。
+- **F-190**：合成台齐备预检（缺料零 churn）+ 死分支注释修正。
+
+### R3 待确认取证结论（本机补证）
+
+| 项 | 结论 | 证据 |
+|---|---|---|
+| a. getRemainingItems 返空桶 | **有效非 no-op**：ResultSlot→RecipeManager.getRemainingItemsFor(CRAFTING)→Recipe default 实现（Item.craftingRemainingItem 通道，牛奶桶→空桶） | 原版反编译 ResultSlot.java L66 + Recipe.java L29 |
+| b. 密封系 handler 置脏 | JarBlockEntity$1 覆写 onContentsChanged→setChanged（teapot/meatmincer 同构） | fidworkblock jar javap |
+| c. 输入槽堆叠 | addItemToNextSlot=ItemStackHandler.insertItem 默认语义（槽上限 64，可堆叠）→ F-188 展平必要 | javap 字节码 |
+| d. canCook 依赖 | 只查 getMinHeat≤heatLevel + 输出槽空/同类，不依赖 dryer.mode | AbstractCookingBlockEntity javap -c |
+| e. smoke4 | `Done (5.340s)!` + 注册自检 12 + kitchen-ready 零 ERROR/WARN | run 冒烟日志 /d/project/temp/m8m9-smoke4.log（02:14:25） |
 
 ## 边界（本轮新增）
 

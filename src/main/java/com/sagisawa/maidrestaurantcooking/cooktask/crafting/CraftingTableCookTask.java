@@ -161,26 +161,35 @@ public class CraftingTableCookTask implements ICookTask {
             layout.add(ItemStack.EMPTY);
         }
         int cursor = 0;
+        // F-190：齐备预检——逐份配料在女仆包内计数核对，齐了才动抽取（防持续缺料时 20Hz 抽还 churn）
+        var inv = maid.getAvailableInv(false);
         for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
             Ingredient ingredient = ingredients.get(idx);
             if (ingredient.isEmpty()) {
                 continue;
             }
-            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
+            if (ItemHandlerUtils.count(inv, StackPredicate.of(ingredient)) < 1) {
+                return; // 缺料静默等待（未抽取零 churn；补货到位后下 tick 通过预检再抽）
+            }
+        }
+        for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
+            Ingredient ingredient = ingredients.get(idx);
+            if (ingredient.isEmpty()) {
+                continue;
+            }
+            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(inv, 1,
                     StackPredicate.of(ingredient), true);
             if (take.isEmpty()) {
+                // 预检通过后抽取仍失败 = 并发/边界态：已抽部分回包 + WARN（30s 窗）
                 rollback(maid, extracted);
-                // 首格即缺 = 普通缺料静默等待；中途缺 = 库存有零头不够一份，响出（30s 窗）
-                if (!extracted.isEmpty()) {
-                    warnStall("crafting-partial-missing", "合成台配料中途缺料，已抽原料回包等待补货：{} @ {}", request.id, pos);
-                }
+                warnStall("crafting-partial-missing", "合成台配料中途缺料，已抽原料回包等待补货：{} @ {}", request.id, pos);
                 return;
             }
             extracted.add(take);
             layout.set(shaped ? idx : cursor++, take);
         }
         if (extracted.isEmpty()) {
-            // 一格都没抽到 = 女仆包里没料：静默等待（对齐 CraftingBowl 缺料行为）
+            // F-190：到此处即异常配方（无任何非空配料）——静默跳过（缺料已在预检层返回，非缺料路径）
             return;
         }
 
