@@ -120,6 +120,15 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
 
         // 完成判定：槽内出现产物 → 逐槽取走（一次一槽，每取 remain--）
         ItemStack output = recipe.getResultItem(level.registryAccess());
+        // F-121：先扫异物（既非本单产物也非本单原料 → 响出停摆）
+        for (int i = 0; i < jar.inventory.getSlots(); i++) {
+            ItemStack scan = jar.inventory.getStackInSlot(i);
+            if (!scan.isEmpty() && scan.getItem() != output.getItem()
+                    && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 腌菜罐槽位存在异物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                return;
+            }
+        }
         for (int i = 0; i < jar.inventory.getSlots(); i++) {
             ItemStack stored = jar.inventory.getStackInSlot(i);
             if (!stored.isEmpty() && ItemStack.isSameItemSameComponents(stored, output)) {

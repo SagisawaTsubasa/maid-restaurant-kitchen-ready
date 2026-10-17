@@ -72,6 +72,9 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         return "FurnaceRoutingCookTask." + routingKey();
     }
 
+    /** F-122：路由误配一次性 WARN 开关（按任务实例去重，防 tick 刷屏）。 */
+    private volatile boolean misconfiguredWarned;
+
     @Nullable
     @Override
     public BlockPos searchWorkBlock(ServerLevel level, EntityMaid maid, int horizontalSearchRange, int verticalSearchRange) {
@@ -90,6 +93,11 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                 center, horizontalSearchRange, verticalSearchRange,
                 pos -> beCheck.test(pos) && BlockUsageManager.getUserCount(pos) <= 0
         );
+        if (found.isEmpty() && target != null && !misconfiguredWarned) {
+            // F-122：路由目标无命中（大概率误配非炉类方块）——按任务一次性响出
+            misconfiguredWarned = true;
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉式路由目标 {} 无可驱动炉 BE 命中（误配？该类型将挂起，不会回落原版炉）：{}", target, getUID());
+        }
         return !found.isEmpty() ? found.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get() : null;
     }
 

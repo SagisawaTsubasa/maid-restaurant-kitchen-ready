@@ -108,6 +108,15 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
         }
         Ingredient ingredient = recipe.getIngredients().isEmpty() ? Ingredient.EMPTY : recipe.getIngredients().get(0);
 
+        // F-121：先扫异物（isSameItem 判据，与取出同口径）
+        for (int i = 0; i < box.getContainerSize(); i++) {
+            ItemStack scan = box.getItem(i);
+            if (!scan.isEmpty() && scan.getItem() != result.getItem()) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 醒发箱槽位存在非本单产物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                return;
+            }
+        }
+
         // 产物取出（isSameItem：完美醒发变体带附加组件，组件级比较会漏）
         for (int i = 0; i < box.getContainerSize(); i++) {
             ItemStack stored = box.getItem(i);

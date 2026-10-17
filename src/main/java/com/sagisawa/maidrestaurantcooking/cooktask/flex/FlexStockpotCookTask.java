@@ -199,6 +199,15 @@ public class FlexStockpotCookTask extends StockpotCookTask {
     // 父类为 protected，这里真覆盖（换 flex 配方）；访问权限不可低于父类
     @Override
     protected void tickState3(ServerLevel level, EntityMaid maid, BlockPos pos, StockpotBlockEntity pot, CookRequest request) {
+        // F-121：成品归属核对（同 FlexPot tickState2）
+        ItemStack potResult = pot.getResult();
+        RecipeHolder<?> ownerCheck = level.getRecipeManager().byKey(request.id).orElse(null);
+        if (potResult != null && !potResult.isEmpty() && ownerCheck != null
+                && ownerCheck.value() instanceof FlexStockpotRecipe ownerRecipe
+                && potResult.getItem() != ownerRecipe.result().getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 汤锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
+            return;
+        }
         if (pot.hasLid()) {
             this.takeLid(level, maid, pos, pot);
         } else {

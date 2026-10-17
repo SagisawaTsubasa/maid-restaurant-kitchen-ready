@@ -97,8 +97,13 @@ public class MincerCookTask extends AbstractTimedContainerCookTask<MincerRecipe>
             return;
         }
 
-        // 输出槽取货
+        // 输出槽取货（F-121：异物产出响出，防静默停摆+继续投料）
         ItemStack output = mincer.getItem(1);
+        ItemStack mincerExpect = recipe.getResultItem(level.registryAccess());
+        if (!output.isEmpty() && output.getItem() != mincerExpect.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 绞肉机输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            return;
+        }
         if (!output.isEmpty() && output.getItem() == recipe.getResultItem(level.registryAccess()).getItem()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());
             mincer.removeItem(1, output.getCount());

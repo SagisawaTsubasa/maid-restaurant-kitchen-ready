@@ -95,8 +95,13 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
             return;
         }
 
-        // 取货
+        // 取货（F-121：异物产出响出）
         ItemStack output = stove.getItem(stove.getOutputSlot());
+        ItemStack stoveExpect = recipe.getResultItem(level.registryAccess());
+        if (!output.isEmpty() && output.getItem() != stoveExpect.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炉灶输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            return;
+        }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());
