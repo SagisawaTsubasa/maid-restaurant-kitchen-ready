@@ -99,8 +99,13 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
 
-        // 取酒（输出槽 5）
+        // 取酒（输出槽 5；F-121：异物产出响出）
         ItemStack output = barrel.getItem(FermentationBarrelBlockEntity.OUTPUT_SLOT_GENERAL);
+        ItemStack barrelExpect = recipe.getResultItem(level.registryAccess());
+        if (!output.isEmpty() && output.getItem() != barrelExpect.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            return;
+        }
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());
             barrel.removeItem(FermentationBarrelBlockEntity.OUTPUT_SLOT_GENERAL, output.getCount());

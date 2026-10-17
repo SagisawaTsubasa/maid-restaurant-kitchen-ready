@@ -169,6 +169,15 @@ public class FlexPotCookTask extends PotCookTask {
     }
 
     private void tickState2(ServerLevel level, EntityMaid maid, BlockPos pos, PotBlockEntity pot, CookRequest request) {
+        // F-121：锅在为玩家/他单煮制时成品非本单——不取（防异菜被本单计数）
+        ItemStack potResult = pot.getResult();
+        RecipeHolder<?> ownerCheck = level.getRecipeManager().byKey(request.id).orElse(null);
+        if (potResult != null && !potResult.isEmpty() && ownerCheck != null
+                && ownerCheck.value() instanceof FlexPotRecipe ownerRecipe
+                && potResult.getItem() != ownerRecipe.result().getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 炒锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
+            return;
+        }
         if (pot.hasCarrier()) {
             RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
             if (holder == null || !(holder.value() instanceof FlexPotRecipe recipe)) {

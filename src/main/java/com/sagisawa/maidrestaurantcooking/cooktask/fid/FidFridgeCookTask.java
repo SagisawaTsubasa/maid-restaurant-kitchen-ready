@@ -100,8 +100,12 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
         ItemStack result = resultOf(recipe);
         Ingredient ingredient = ingredientOf(recipe);
 
-        // 输出槽有本配方产物 → 取走
+        // 输出槽有本配方产物 → 取走（F-121：异物产出响出）
         ItemStack output = fridge.getItem(outputSlot());
+        if (!output.isEmpty() && output.getItem() != result.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰箱输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            return;
+        }
         if (!output.isEmpty() && output.getItem() == result.getItem()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());
             fridge.removeItem(outputSlot(), output.getCount());

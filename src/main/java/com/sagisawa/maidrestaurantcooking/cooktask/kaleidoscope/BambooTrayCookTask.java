@@ -102,6 +102,16 @@ public class BambooTrayCookTask implements ICookTask {
             return;
         }
 
+        // F-121：先扫异物（板上既非本单原料也非本单产物的槽 → 响出停摆）
+        ItemStack trayExpect = recipe.getResult();
+        for (int slot = 0; slot < tray.getContainerSize(); slot++) {
+            ItemStack scan = tray.getItem(slot);
+            if (!scan.isEmpty() && scan.getItem() != trayExpect.getItem() && !recipe.getIngredient().test(scan)) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 竹匾槽位存在异物（{}），停摆待处理：{} @ {}", scan.getItem(), request.id, pos);
+                return;
+            }
+        }
+
         // 1) 已有完成品 → 整槽取走（BE 会把结果按输入数量放大）
         for (int slot = 0; slot < tray.getContainerSize(); slot++) {
             ItemStack stored = tray.getItem(slot);

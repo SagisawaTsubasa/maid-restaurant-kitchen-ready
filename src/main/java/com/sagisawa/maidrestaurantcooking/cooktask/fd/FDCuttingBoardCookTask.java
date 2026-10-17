@@ -109,6 +109,15 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
             return;
         }
 
+        // F-120：板上在制物料非本单原料时不动刀（防切异物+remain-- 误计，与 F-112 同判据）
+        if (!board.getStoredItem().isEmpty()) {
+            var storedInput = recipe.getIngredients().isEmpty() ? Ingredient.EMPTY : recipe.getIngredients().getFirst();
+            if (!storedInput.isEmpty() && !storedInput.test(board.getStoredItem())) {
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] FD 砧板在制物料非本单原料（{}），不动刀：{} @ {}", board.getStoredItem().getItem(), request.id, pos);
+                return;
+            }
+        }
+
         // 放料
         if (board.getStoredItem().isEmpty()) {
             var ingredients = recipe.getIngredients();

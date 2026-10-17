@@ -103,8 +103,13 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
             return;
         }
 
-        // 取货（槽 4）
+        // 取货（槽 4；F-121：异物产出响出）
         ItemStack output = bowl.getItem(OUTPUT_SLOT);
+        ItemStack bowlExpect = recipe.getResultItem(level.registryAccess());
+        if (!output.isEmpty() && output.getItem() != bowlExpect.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 搅拌碗输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            return;
+        }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());

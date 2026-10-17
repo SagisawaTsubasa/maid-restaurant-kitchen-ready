@@ -15,8 +15,9 @@ import java.util.Map;
  *
  * <p>纪律：非法行（缺 =、键解析失败、目标方块 id 非法）记 WARN 并跳过该行（不静默装正常、
  * 也不整体失效）；全部非法时 map 为空，T4 任务据此判定「未启用」。
- * 注意（F-113）：本表只校验 id 合法性；目标方块是否为可驱动炉类 BE 由 T4 搜索守卫运行时
- * 判定——配置非炉类方块时该行实际不生效（回落原版炉）。
+ * 注意（F-122 真实语义）：本表只校验 id 合法性；配置为非炉类方块（BE 非
+ * AbstractFurnaceBlockEntity 子类）时该类型**不会回落原版炉**，而是找不到工作方块、
+ * 请求挂起（运行期有一次性 WARN）。务必确认目标方块的 BE 是炉类。
  */
 public final class FurnaceRouting {
     private record Rule(ResourceLocation sourceType, ResourceLocation targetBlock) {

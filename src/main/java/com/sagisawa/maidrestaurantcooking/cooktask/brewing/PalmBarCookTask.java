@@ -98,8 +98,13 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
 
-        // 取货（槽 0）
+        // 取货（槽 0；F-121：异物产出响出）
         ItemStack output = bar.getItem(0);
+        ItemStack barExpect = recipe.getResultItem(level.registryAccess());
+        if (!output.isEmpty() && output.getItem() != barExpect.getItem()) {
+            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 吧台输出槽为非本单产物（{}），停摆待处理：{} @ {}", output.getItem(), request.id, pos);
+            return;
+        }
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
             ItemUtils.getItemToLivingEntity(maid, output.copy());
             bar.removeItem(0, output.getCount());

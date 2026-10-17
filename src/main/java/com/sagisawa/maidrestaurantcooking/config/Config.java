@@ -26,8 +26,9 @@ public final class Config {
     /**
      * 炉式路由映射（M3 启用）：每行 "源RecipeType键=目标工作方块id"。
      * 留空 = 路由到原版炉（熔炉/烟熏炉/高炉，默认行为）。
-     * 注意（F-110）：路由目标必须是带炉类 BlockEntity（AbstractFurnaceBlockEntity 子类）的方块，
-     * 否则搜索守卫（F-004）会跳过该目标并回落——配置非炉类方块不会生效。
+     * 注意（F-122 真实语义）：路由目标必须是带炉类 BlockEntity（AbstractFurnaceBlockEntity 子类）
+     * 的方块——配置非炉类方块时该类型不会回落原版炉，而是找不到工作方块、请求挂起
+     * （运行期有一次性 WARN）。
      */
     public static final ModConfigSpec.ConfigValue<List<? extends String>> FURNACE_ROUTING_RULES;
 
