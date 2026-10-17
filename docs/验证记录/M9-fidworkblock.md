@@ -40,14 +40,32 @@
 - `getAllRecipeData`：只收录 DRIVEN_APPLIANCES 且产物含 FOOD 组件（研钵砂砾/土膏等非食品天然被滤）。
 - 门控：CompatMods.FIDWORKBLOCK（modId 实测自其 neoforge.mods.toml）+ mods.toml optional + logGates。
 
-## R1 审查修复（2026-10-18，13 发现全修：P1×1 P2×4 P3×8）
+## 审查修复明细（本批 v0.2.0；逐项收口状态以审查台账为准）
+
+> 编号说明（F-180）：本批 R1 报告的 F-161~F-173 是审查员连续编号，与台账存量 R11 的 F-161（FurnitureSlicing）/F-162（MonsterPot）**同号不同义**——本批发现以下表与本节为准，存量条目以台账 R11 为准。
+
+### R1（首审，13 发现：P1×1 P2×4 P3×8）
 
 - **F-161 (P1)**：wok 改「计数式配齐才翻炒 + 收锅前配方自校验」——原「锅空才投料」门控使部分投料永不续投、半成品被程序化菜顶单。
-- **F-162 (P2)**：isValidWorkBlock 校验工位与本单 appliance 同型（peek null 宽容）；11 case 补 mismatch WARN。
+- **F-162 (P2)**：isValidWorkBlock 校验工位与本单 appliance 同型（peek null 宽容）；cookTick 分派 **9 个 case 标签覆盖 11 台**（pressurecooker/dryer/pot 共用一个 case）补 mismatch WARN。
 - **F-163 (P2)**：fryingpan 台面残留判定（对称面）+ isIdleForSearch 补 !hasIngredient。
 - **F-164 (P2)**：炉灶系输入区残留扫描（与密封系同构退料+WARN）。
 - **F-165 (P2)**：searchWorkBlock 未接设备 WARN + 炸锅「在场但不叠放」F-128 式检测 WARN。
 - **F-166/F-167/F-168/F-169/F-170/F-171/F-172/F-173 (P3)**：密封系死参数清除；「已投」改计数式（需求份数=配料重复次数）；单料设备入口配料数防护；窗口化日志键控（消息码:工位）；ERROR 窗口化；占位符修复；文档漂移修正；炉灶系取货补 setChanged。
+
+### R2（复验，11 发现：P2×1 P3×10）
+
+- **F-174 (P2→P3)**：wok 投料收口——javap 实证 `WokBlockEntity.addItem` 为 **void**（无 remainder 可核），唯一收口点=前置 canAddItem()（BE 内含满/非配方料判定），按审查口径降级并修注释。
+- **F-175 (P3)**：合成台产物数量对账（见 M8 记录口径节）。
+- **F-176 (P3)**：search 侧窗口键去坐标化（recipe-missing 只含配方 id、appliance-undriven 含 appliance），女仆移动不再产生新键。
+- **F-177 (P3)**：炉灶自走支路补「加工中不补投」门控（getCookingProgress>0 return，与密封/压榨机对称）。
+- **F-178 (P3)**：密封系补投改走 BE 自己的投料口（addItemToNextSlot/addItemToSlot，核 remainder 防吞料）。
+- **F-179 (P3)**：删空 if 死代码。
+- **F-180 (P3)**：编号撞号标注（见本节抬头说明）。
+- **F-181 (P3)**：M8 计数口径拆两栏+来源（见 M8 记录）。
+- **F-182 (P3)**：本节 9 case/11 台口径修正 + 轮次无关叙述。
+- **F-183 (P3)**：炸锅误配检测改 matcher 顺手记录（零额外遍历）。
+- **F-184 (P3)**：isValidWorkBlock 复用 resolveRecipe（配方判据单点化）。
 
 ### 待确认取证结论（R1 审查员缺证据项，本机 javap/解包补齐）
 
