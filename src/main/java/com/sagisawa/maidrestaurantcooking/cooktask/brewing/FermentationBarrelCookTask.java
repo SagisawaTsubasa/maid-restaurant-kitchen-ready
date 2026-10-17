@@ -68,7 +68,14 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
         FermentationBarrelRecipe recipe = (FermentationBarrelRecipe) recipeHolder.value();
-        return recipe.getIngredients().stream().filter(i -> !i.isEmpty()).map(StackPredicate::new).toList();
+        // F-148：酒瓶是必需辅料（isWineBottleRequired），进取料单——女仆才会主动去仓库取瓶
+        java.util.List<StackPredicate> ans = new java.util.ArrayList<>(recipe.getIngredients().stream()
+                .filter(i -> !i.isEmpty()).map(StackPredicate::new).toList());
+        if (recipe.isWineBottleRequired()) {
+            ans.add(StackPredicate.of(s -> s.getItem()
+                    == net.satisfy.vinery.core.registry.ObjectRegistry.WINE_BOTTLE.get()));
+        }
+        return ans;
     }
 
     @Override
@@ -118,12 +125,13 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
             return;
         }
 
-        // 投汁（槽 0）与瓶（槽 4，配方要求时）；F-138：槽 0 异物（非空且非本单汁）→ WARN 停摆
+        // 投汁（槽 0）与瓶（槽 4，配方要求时）；F-138/F-149：槽 0 异物 → 停摆（return 无条件），WARN 带窗
         if (!barrel.getItem(0).isEmpty()
-                && recipe.getIngredients().stream().noneMatch(ing -> ing.test(barrel.getItem(0)))
-                && System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-            stallLastWarnMs = System.currentTimeMillis();
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶汁槽为非本单原料（{}），停摆待处理：{} @ {}", barrel.getItem(0).getItem(), request.id, pos);
+                && recipe.getIngredients().stream().noneMatch(ing -> ing.test(barrel.getItem(0)))) {
+            if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                stallLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶汁槽为非本单原料（{}），停摆待处理：{} @ {}", barrel.getItem(0).getItem(), request.id, pos);
+            }
             return;
         }
         for (var ingredient : recipe.getIngredients()) {
@@ -140,11 +148,14 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
                 break;
             }
         }
-        // F-143：酒瓶槽异物 → WARN 停摆
+        // F-143/F-149：酒瓶槽异物 → 停摆（return 无条件），WARN 带窗；缺瓶且女仆无瓶 → WARN 带窗（F-148 闭环）
         ItemStack bottleSlot = barrel.getItem(FermentationBarrelBlockEntity.WINE_BOTTLE_SLOT);
         if (!bottleSlot.isEmpty() && recipe.isWineBottleRequired()
                 && bottleSlot.getItem() != net.satisfy.vinery.core.registry.ObjectRegistry.WINE_BOTTLE.get()) {
-            MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶酒瓶槽为非酒瓶物品（{}），停摆待处理：{} @ {}", bottleSlot.getItem(), request.id, pos);
+            if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                stallLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶酒瓶槽为非酒瓶物品（{}），停摆待处理：{} @ {}", bottleSlot.getItem(), request.id, pos);
+            }
             return;
         }
         if (recipe.isWineBottleRequired() && barrel.getItem(FermentationBarrelBlockEntity.WINE_BOTTLE_SLOT).isEmpty()) {
@@ -155,6 +166,9 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
                 barrel.setItem(FermentationBarrelBlockEntity.WINE_BOTTLE_SLOT, bottle);
                 barrel.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
+            } else if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                stallLastWarnMs = System.currentTimeMillis();
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 发酵桶等酒瓶但女仆无瓶，订单挂起：{} @ {}", request.id, pos);
             }
         }
     }

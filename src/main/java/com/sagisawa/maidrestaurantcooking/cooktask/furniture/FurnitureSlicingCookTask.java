@@ -115,11 +115,14 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
                 request.remain--;
             }
         } else {
-            // F-144：板被占（他单在切）——还料并响出（30s 窗防刷屏），下 tick 重试
+            // F-144/F-153：板被占（他单在切）——还料+30s 窗 WARN；窗内直接退避不再抽还（防每 tick 抽还抖动）
             ItemUtils.getItemToLivingEntity(maid, take);
             if (System.currentTimeMillis() - busyLastWarnMs > 30_000L) {
                 busyLastWarnMs = System.currentTimeMillis();
                 MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 家具砧板被占，原料回包待重试：{} @ {}", request.id, pos);
+            } else {
+                // 退避窗口内：不再每 tick 尝试（本 tick 已把 take 还包，下一轮配方扫描自然等待）
+                MaidRestaurantCooking.LOGGER.debug("[xia-de-chu-fang] 家具砧板仍被占，退避中：{} @ {}", request.id, pos);
             }
         }
     }

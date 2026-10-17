@@ -51,6 +51,9 @@ import java.util.List;
  */
 public class TeapotCookTask implements ICookTask {
 
+    /** F-151：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long stallLastWarnMs;
+
     @Override
     public String getUID() {
         return "TeapotCookTask";
@@ -171,8 +174,11 @@ public class TeapotCookTask implements ICookTask {
                         maid.swing(InteractionHand.OFF_HAND);
                     }
                 } else if (!recipe.ingredient().test(teapot.getInput())) {
-                    // F-145：壶内输入为非本单原料（遗留物）——响出停摆，不覆盖
-                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶内为非本单原料（{}），停摆待处理：{} @ {}", teapot.getInput().getItem(), request.id, pos);
+                    // F-145/F-151：壶内输入为非本单原料（遗留物）——响出停摆（带窗），不覆盖
+                    if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                        stallLastWarnMs = System.currentTimeMillis();
+                        MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 茶壶内为非本单原料（{}），停摆待处理：{} @ {}", teapot.getInput().getItem(), request.id, pos);
+                    }
                 }
                 // 注液+投料完毕：BE 自计时（需热源，isValidWorkBlock/searchWorkBlock 已过滤）
             }
