@@ -37,6 +37,13 @@ public final class Config {
      */
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DISABLED_CATEGORIES;
 
+    /**
+     * 合成台食物合成开关（M8）：false 时 minecraft:crafting 不进点单菜单（任务仍注册，
+     * 关停仅作用于 getAllRecipeData 出口）。运行时消费——构造期 config 未加载禁 .get()。
+     * define(String, boolean)→BooleanValue 已 javap 实证（neoforge 21.1.251 universal jar）。
+     */
+    public static final ModConfigSpec.BooleanValue CRAFTING_TABLE_ENABLED;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -61,6 +68,12 @@ public final class Config {
         DISABLED_CATEGORIES = builder
                 .defineList("disabledCategories", List.of(),
                         o -> o instanceof String s && !s.isBlank());
+        builder.pop();
+
+        builder.push("craftingTable")
+                .comment("合成台食物合成（M8）：false 时原版合成配方（产物含食物组件者）不进点单菜单；菜单过载时也可用 categoryToggles 填 \"minecraft:crafting\" 关停。");
+        CRAFTING_TABLE_ENABLED = builder
+                .define("enabled", true);
         builder.pop();
 
         SPEC = builder.build();
