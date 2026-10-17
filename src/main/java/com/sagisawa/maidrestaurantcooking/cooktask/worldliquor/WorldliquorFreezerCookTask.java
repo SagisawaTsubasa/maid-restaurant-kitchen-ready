@@ -44,6 +44,9 @@ import java.util.function.Predicate;
  */
 public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<FreezerRecipe> {
 
+    /** F-156：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
+    private volatile long stallLastWarnMs;
+
     @Override
     public String getUID() {
         return "WorldliquorFreezerCookTask";
@@ -210,7 +213,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             if (material.isEmpty()) {
                 continue;
             }
-            // F-003：按"本次是否放入"判定归还，不用跨配料复用的历史标志
+            // F-003：按"本次是否放入"判定归还；F-156：满槽 WARN（30s 窗）+退避
             boolean putIn = false;
             for (int i = 0; i < freezer.inputInventory.getSlots(); i++) {
                 if (freezer.inputInventory.getStackInSlot(i).isEmpty()) {
@@ -222,6 +225,10 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             }
             if (!putIn) {
                 ItemUtils.getItemToLivingEntity(maid, material);
+                if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
+                    stallLastWarnMs = System.currentTimeMillis();
+                    MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰柜输入槽满，原料回包待重试：{} @ {}", request.id, pos);
+            }
             }
         }
     }
