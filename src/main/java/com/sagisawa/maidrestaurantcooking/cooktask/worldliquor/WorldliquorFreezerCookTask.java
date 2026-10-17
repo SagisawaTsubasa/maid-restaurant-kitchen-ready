@@ -47,6 +47,31 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
     /** F-156：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
     private volatile long stallLastWarnMs;
 
+    /** F-160：站点键控退避（同 MonsterPot）。 */
+    private record StationKey(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
+                              net.minecraft.core.BlockPos pos) {
+    }
+
+    private final java.util.concurrent.ConcurrentHashMap<StationKey, Long> backoffUntil = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean inBackoff(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos) {
+        StationKey key = new StationKey(level.dimension(), pos.immutable());
+        Long until = backoffUntil.get(key);
+        if (until != null && System.currentTimeMillis() < until) {
+            return true;
+        }
+        if (backoffUntil.size() > 64) {
+            long now = System.currentTimeMillis();
+            backoffUntil.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        return false;
+    }
+
+    private void setBackoff(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos, long durationMs) {
+        backoffUntil.put(new StationKey(level.dimension(), pos.immutable()),
+                System.currentTimeMillis() + durationMs);
+    }
+
     @Override
     public String getUID() {
         return "WorldliquorFreezerCookTask";
@@ -193,7 +218,10 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
         }
 
         // 投料：inputInventory.onContentsChanged 自动触发匹配+autoStart
-        // F-119：先核槽内是否已有同料，防重复塞料致槽满死锁
+        // F-119：先核槽内是否已有同料，防重复塞料致槽满死锁；F-156/F-160：满槽退避窗内不抽料
+        if (inBackoff(level, pos)) {
+            return;
+        }
         var ingredients = recipe.getIngredients();
         for (Ingredient ingredient : ingredients) {
             if (ingredient.isEmpty()) {
@@ -225,6 +253,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             }
             if (!putIn) {
                 ItemUtils.getItemToLivingEntity(maid, material);
+                setBackoff(level, pos, 30_000L);
                 if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                     stallLastWarnMs = System.currentTimeMillis();
                     MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 冰柜输入槽满，原料回包待重试：{} @ {}", request.id, pos);

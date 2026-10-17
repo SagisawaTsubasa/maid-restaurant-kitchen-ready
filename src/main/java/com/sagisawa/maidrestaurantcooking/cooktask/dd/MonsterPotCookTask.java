@@ -34,8 +34,30 @@ import java.util.function.Predicate;
  */
 public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPotRecipe> {
 
-    /** F-156：锅满退避截止时间（30s，窗内不抽还料防抖动）。 */
-    private volatile long fullBackoffUntilMs;
+    /** F-160：站点键控退避（任务实例跨维度共享，退避必须按 维度+坐标 区分；过期条目顺手清理）。 */
+    private record StationKey(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
+                              net.minecraft.core.BlockPos pos) {
+    }
+
+    private final java.util.concurrent.ConcurrentHashMap<StationKey, Long> backoffUntil = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean inBackoff(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos) {
+        StationKey key = new StationKey(level.dimension(), pos.immutable());
+        Long until = backoffUntil.get(key);
+        if (until != null && System.currentTimeMillis() < until) {
+            return true;
+        }
+        if (backoffUntil.size() > 64) {
+            long now = System.currentTimeMillis();
+            backoffUntil.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        return false;
+    }
+
+    private void setBackoff(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos, long durationMs) {
+        backoffUntil.put(new StationKey(level.dimension(), pos.immutable()),
+                System.currentTimeMillis() + durationMs);
+    }
 
     /** F-156：锅满 WARN 上次响出时间戳（30s 时间窗去重）。 */
     private volatile long stallLastWarnMs;
@@ -143,16 +165,17 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             } else {
-                // 容器不符（如配方实际用留空罐）：碗退回女仆包
+                // F-162：容器不符（配方实际用其他容器）——碗退回女仆包并响出
                 ItemUtils.getItemToLivingEntity(maid, bowl);
+                MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅上菜容器被拒，碗已回包：{} @ {}", request.id, pos);
             }
             return;
         }
 
-        // 投配料（0-5）与容器（7）；F-156：锅满退避窗内不抽料
+        // 投配料（0-5）与容器（7）；F-156/F-160：锅满退避窗内不抽料（按站点键控）
         var inv = pot.getInventory();
         boolean supplied = false;
-        if (System.currentTimeMillis() < fullBackoffUntilMs) {
+        if (inBackoff(level, pos)) {
             return;
         }
         for (Ingredient ingredient : recipe.getIngredients()) {
@@ -181,9 +204,9 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                     }
                 }
                 if (!putIn) {
-                    // F-003+F-156：按本次放入判定归还；锅满设退避+响出（30s 窗）
+                    // F-003+F-156/F-160：按本次放入判定归还；锅满设站点退避+响出（30s 窗）
                     ItemUtils.getItemToLivingEntity(maid, take);
-                    fullBackoffUntilMs = System.currentTimeMillis() + 30_000L;
+                    setBackoff(level, pos, 30_000L);
                     if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                         stallLastWarnMs = System.currentTimeMillis();
                         MaidRestaurantCooking.LOGGER.warn("[xia-de-chu-fang] 怪物锅配料槽满，原料回包待重试：{} @ {}", request.id, pos);
