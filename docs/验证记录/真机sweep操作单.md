@@ -1,6 +1,6 @@
 # 真机 sweep 操作单（璇穹之歌-O 客户端 · 待人工执行）
 
-前置：客户端双装已清（fork8.2 + otc 1.2.1 保留）；`maid-restaurant-kitchen-ready-0.1.0.jar` 入 mods；M0 客户端加载验证通过。
+前置：客户端双装已清（fork8.2 + otc 1.2.1 保留）；`maid-restaurant-kitchen-ready-0.2.2.jar` 入 mods；M0 客户端加载验证通过。
 
 通用判定链：**接单（点单 UI 出现该菜品）→ 取料（女仆去箱子/背包取齐原料）→ 烹饪（工作方块状态推进）→ 打包（女仆取得产物）→ 上桌（营业链送单）**。任一环断裂即标红并记录 latest.log 相关行。
 
@@ -49,8 +49,10 @@
 
 | # | 操作 | 判定点 |
 |---|---|---|
-| E0 | 环境确认：璇穹之歌 服务器/客户端工作台为可视化工作台（VisualWorkbench 原键换实例） | 0.2.1 锚点按注册表键判定，替换实例应被识别（E1-E6 在此环境下执行） |
-| E1 | 合成台旁下单任一**产物含食物组件的合成配方**（蛋糕物品形态无 FOOD 组件不进菜单——勿用蛋糕）；优先选消耗牛奶桶/碗的配方 | 有序合成全链；容器返还（getRemainingItems 经 getRemainingItemsFor 原版 default 实现，craftingRemainingItem 通道，返空桶/空碗——javap+反编译实证） |
+| E0 | 环境确认：无需合成台方块；站立合成=女仆自动找空凳位（cook_stool/chair tag），骑坐原地合成 | 站立例：女仆自动走到半径内空凳邻位合成；骑坐例：原地合成零移动；无凳位时 30s 窗 WARN「no-seat-neighbor」，**订单挂起**（服务端不冻结），补凳或女仆骑坐后继续（E1-E6 在此环境下执行） |
+| E0b | 判别性几何（F-200）：转角台面同凳双 marker——A 女仆占 marker1 烹饪（站其唯一凳），marker2 空闲但其唯一凳=A 所站凳；B 同时接合成单 | 断言 **B 不选 marker2**（其唯一凳被 A 占，isSeatFree 过滤生效）而等待或另寻；仅当**全部凳被占**才出现 seat-all-busy WARN（键=`seat-all-busy:女仆UUID` per-maid、30s 窗；**日志文本为中文文案、不含消息码字面量**——判定认文案不认码）；无「最近被占凳反复重试」饿死 |
+| E1 | 厨房凳位旁下单**曲奇或南瓜派**（真 shaped 食物；蛋糕物品形态无 FOOD 组件不进菜单——勿用蛋糕）（F-198） | 有序合成全链 |
+| E1b | 容器返还单列：下单任一**消耗牛奶桶**且产物含 FOOD 组件的合成配方（现场用配方浏览器选定） | 牛奶桶经 craftingRemainingItem 通道返**空桶**（getRemainingItems 经 getRemainingItemsFor 原版 default 实现——javap+反编译实证）；**碗不返还**（原版 bowl 无 craftingRemainingItem，消耗品——勿按返还判碗，防假红） |
 | E2 | 下单牛油果吐司（无序合成） | shapeless 全链 |
 | E3 | 下单非对称图案食物 | 镜像匹配通过 |
 | E4a | 女仆包只放**首个**配料 | 静默等待（齐备预检拦截，零日志零抽取）；补料后完成 |

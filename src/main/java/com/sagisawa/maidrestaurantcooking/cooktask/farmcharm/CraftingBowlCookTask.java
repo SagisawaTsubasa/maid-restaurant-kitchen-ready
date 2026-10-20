@@ -70,10 +70,12 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
         return pos -> level.getBlockEntity(pos) instanceof CraftingBowlBlockEntity;
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
         CraftingBowlRecipe recipe = (CraftingBowlRecipe) recipeHolder.value();
-        return recipe.getIngredients().stream().filter(i -> !i.isEmpty()).map(StackPredicate::new).toList();
+        return recipe.getIngredients().stream().filter(i -> !i.isEmpty()).map(StackPredicate::new)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
     }
 
     @Override

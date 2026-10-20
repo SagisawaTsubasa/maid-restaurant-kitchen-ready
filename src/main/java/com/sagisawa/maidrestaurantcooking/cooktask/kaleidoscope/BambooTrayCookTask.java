@@ -54,10 +54,13 @@ public class BambooTrayCookTask implements ICookTask {
         return ModRecipes.BAMBOO_TRAY_RECIPE;
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends Recipe<?>> recipeHolder, Level level) {
         BambooTrayRecipe recipe = (BambooTrayRecipe) recipeHolder.value();
-        return List.of(StackPredicate.of(recipe.getIngredient()));
+        List<StackPredicate> ans = new ArrayList<>();
+        ans.add(StackPredicate.of(recipe.getIngredient()));
+        return ans;
     }
 
     @Override
