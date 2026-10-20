@@ -69,12 +69,16 @@ public class TeapotCookTask implements ICookTask {
         return ModRecipes.TEAPOT_RECIPE;
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends Recipe<?>> recipeHolder, Level level) {
         TeapotRecipe recipe = (TeapotRecipe) recipeHolder.value();
         // 流体容器谓词：任意流体容器首罐 ≥1000mB 且流体与配方一致；配料 1 个
         StackPredicate fluidContainer = StackPredicate.of(stack -> hasFluid(stack, recipe.teaFluid()));
-        return List.of(fluidContainer, StackPredicate.of(recipe.ingredient()));
+        List<StackPredicate> ans = new ArrayList<>();
+        ans.add(fluidContainer);
+        ans.add(StackPredicate.of(recipe.ingredient()));
+        return ans;
     }
 
     @Override

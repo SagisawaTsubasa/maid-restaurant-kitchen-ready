@@ -60,10 +60,12 @@ public class FlexPotCookTask extends PotCookTask {
         return ModRecipes.FLEX_POT_RECIPE;
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends Recipe<?>> recipeHolder, Level level) {
         FlexPotRecipe recipe = (FlexPotRecipe) recipeHolder.value();
-        List<StackPredicate> predicates = new ArrayList<>(recipe.getIngredients().stream().filter(s -> !s.isEmpty()).map(StackPredicate::new).toList());
+        List<StackPredicate> predicates = recipe.getIngredients().stream().filter(s -> !s.isEmpty()).map(StackPredicate::new)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         if (!recipe.carrier().isEmpty()) {
             for (int i = 0; i < recipe.result().getCount(); i++) {
                 predicates.add(StackPredicate.of(recipe.carrier()));

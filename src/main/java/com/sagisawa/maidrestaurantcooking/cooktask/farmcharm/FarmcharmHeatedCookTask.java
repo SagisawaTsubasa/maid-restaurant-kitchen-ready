@@ -30,10 +30,12 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
 
     protected abstract List<Ingredient> ingredientsOf(R recipe);
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends Recipe<?>> recipeHolder, Level level) {
         return ingredientsOf(recipeClass().cast(recipeHolder.value())).stream()
-                .filter(i -> !i.isEmpty()).map(StackPredicate::new).toList();
+                .filter(i -> !i.isEmpty()).map(StackPredicate::new)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
     }
 
     @Override

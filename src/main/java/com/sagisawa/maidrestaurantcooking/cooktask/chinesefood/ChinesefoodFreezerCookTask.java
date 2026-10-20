@@ -59,6 +59,7 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
         };
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
         BaseProcessingRecipe recipe = (BaseProcessingRecipe) recipeHolder.value();
