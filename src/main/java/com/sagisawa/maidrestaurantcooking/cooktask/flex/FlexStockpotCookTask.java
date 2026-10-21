@@ -216,7 +216,9 @@ public class FlexStockpotCookTask extends StockpotCookTask {
 
             ItemStack bucket = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(iSoupBase::isSoupBase), true);
             if (!bucket.isEmpty()) {
+                ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                 pot.addSoupBase(level, maid, bucket);
+                DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // BE 内部旧交付（Stockpot javap addSoupBase:919）空桶返还收接
                 maid.swing(InteractionHand.OFF_HAND);
             }
         }
@@ -243,7 +245,9 @@ public class FlexStockpotCookTask extends StockpotCookTask {
                 for (StackPredicate ingredient : required) {
                     ItemStack material = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, ingredient, true);
                     if (!material.isEmpty()) {
+                        ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                         pot.addIngredient(level, maid, material);
+                        DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // BE 内部旧交付（Stockpot javap addIngredient:1108）拒收/容器返还收接
                         maid.swing(InteractionHand.OFF_HAND);
                     }
                 }
@@ -273,7 +277,9 @@ public class FlexStockpotCookTask extends StockpotCookTask {
             }
             ItemStack carrier = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(recipe.carrier()), true);
             if (!carrier.isEmpty()) {
+                ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                 pot.takeOutProduct(level, maid, carrier);
+                DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // BE 内部旧交付（Stockpot javap takeOutProduct:1357）成品+carrier 收接
                 maid.swing(InteractionHand.OFF_HAND);
                 if (pot.getTakeoutCount() == 0) {
                     request.remain--;

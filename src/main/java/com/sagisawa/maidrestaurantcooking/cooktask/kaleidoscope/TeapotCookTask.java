@@ -152,7 +152,10 @@ public class TeapotCookTask implements ICookTask {
                     MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶内为非本单茶品（{}），不取：{} @ {}", brewed.getItem(), request.id, pos);
                     return;
                 }
+                ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                 if (teapot.takeTeapot(level, maid)) {
+                    // BE 内部走森罗旧交付（Teapot javap takeTeapot:572 旧交付工具调用）——主手新增（茶/壶）即收接
+                    DeliveryUtil.reclaimDeliveredMainHand(maid, handRef);
                     maid.swing(InteractionHand.OFF_HAND);
                     request.remain--;
                 }

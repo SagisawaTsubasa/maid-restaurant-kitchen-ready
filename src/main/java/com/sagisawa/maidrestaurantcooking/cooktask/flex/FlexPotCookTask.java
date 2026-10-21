@@ -13,6 +13,7 @@ import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
 import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.sagisawa.maidrestaurantcooking.utils.RecipeDataFilter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -146,7 +147,9 @@ public class FlexPotCookTask extends PotCookTask {
                 for (StackPredicate ingredient : required) {
                     ItemStack material = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, ingredient, true);
                     if (!material.isEmpty()) {
+                        ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                         pot.addIngredient(level, maid, material);
+                        DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // BE 内部旧交付（Pot javap addIngredient:1431）拒收/容器返还收接
                         maid.swing(InteractionHand.OFF_HAND);
                     }
                 }
@@ -184,6 +187,7 @@ public class FlexPotCookTask extends PotCookTask {
             MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炒锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
             return;
         }
+        ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
         if (pot.hasCarrier()) {
             FlexPotRecipe recipe = ownerRecipe;
             ItemStack carrier = ItemHandlerUtils.tryExtractSingleSlot(
@@ -191,11 +195,13 @@ public class FlexPotCookTask extends PotCookTask {
             );
             if (!carrier.isEmpty()) {
                 pot.takeOutProduct(level, maid, carrier);
+                DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // BE 内部旧交付（Pot javap takeOutProduct:1188/1262/1363）成品+容器收接
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             }
         } else {
             pot.takeOutProduct(level, maid, new ItemStack((ItemLike) ModItems.KITCHEN_SHOVEL.get()));
+            DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // 铲子回手收接（同上）
             maid.swing(InteractionHand.OFF_HAND);
             request.remain--;
         }
