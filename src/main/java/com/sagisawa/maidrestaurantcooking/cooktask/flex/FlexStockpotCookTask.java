@@ -8,11 +8,9 @@ import com.github.ysbbbbbb.kaleidoscopecookery.crafting.recipe.FlexStockpotRecip
 import com.github.ysbbbbbb.kaleidoscopecookery.crafting.soupbase.SoupBaseManager;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModRecipes;
-import com.github.ysbbbbbb.kaleidoscopecookery.init.ModSoupBases;
 import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.cooktask.StockpotCookTask;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
-import com.mastermarisa.maid_restaurant.utils.FakePlayerUtils;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -24,14 +22,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -203,17 +199,12 @@ public class FlexStockpotCookTask extends StockpotCookTask {
             }
             ResourceLocation soupBase = recipe.soupBase();
             ISoupBase iSoupBase = SoupBaseManager.getSoupBase(soupBase);
-            if (soupBase.equals(ModSoupBases.WATER)) {
-                int count = ItemHandlerUtils.count(maid.getAvailableInv(false), StackPredicate.of(iSoupBase::isSoupBase));
-                if (count >= 2) {
-                    FakePlayer fakePlayer = FakePlayerUtils.getPlayer(level);
-                    pot.addSoupBase(level, fakePlayer, new ItemStack(Items.WATER_BUCKET));
-                    fakePlayer.getInventory().clearContent();
-                    maid.swing(InteractionHand.OFF_HAND);
-                    return;
-                }
-            }
-
+            // R2-2（复验 2026-10-21）：不沿用上游 StockpotCookTask.tickState0 的 WATER 特判（0.2.9
+            // all.java:4484-4492）——该特判只读 count 做准入不扣减、新构造水桶走 FakePlayer、
+            // clearContent() 销毁 BE 返还的空桶：水凭空生成+空桶凭空消失，与下方 maid 路径同操作
+            // 双语义。实证 StockpotBE.addSoupBase（javap 1.6.0，StockpotBE.txt:865-925）：恰好
+            // stack.shrink(1) 耗 1 桶、返还容器走旧交付，maid 路径即完整闭环（真机用例 8），故
+            // WATER 与其它汤底统一走通用路径，删 FakePlayer 特判。
             ItemStack bucket = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1, StackPredicate.of(iSoupBase::isSoupBase), true);
             if (!bucket.isEmpty()) {
                 ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
