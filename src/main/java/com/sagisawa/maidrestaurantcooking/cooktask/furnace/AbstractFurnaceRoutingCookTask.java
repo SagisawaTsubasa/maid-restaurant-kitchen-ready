@@ -10,6 +10,7 @@ import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
 import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
 import com.sagisawa.maidrestaurantcooking.config.FurnaceRouting;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.sagisawa.maidrestaurantcooking.utils.RecipeDataFilter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -221,7 +222,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
     }
 
     private static void ItemHandlerHelperGive(EntityMaid maid, ItemStack stack) {
-        com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, stack);
+        DeliveryUtil.deliverToMaidInv(maid, stack);
     }
 
     @Override

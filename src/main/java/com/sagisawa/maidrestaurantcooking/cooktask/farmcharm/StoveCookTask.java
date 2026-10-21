@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.farmcharm;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -113,7 +113,7 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
         }
         ItemStack expect = recipe.getResultItem(level.registryAccess());
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
-            ItemUtils.getItemToLivingEntity(maid, output.copy());
+            DeliveryUtil.deliverToMaidInv(maid, output.copy());
             stove.removeItem(stove.getOutputSlot(), output.getCount());
             stove.setChanged();
             maid.swing(InteractionHand.OFF_HAND);

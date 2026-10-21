@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.farmcharm;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -68,7 +68,7 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack stored = container.getItem(i);
             if (!stored.isEmpty() && stored.getItem() == expect.getItem()) {
-                ItemUtils.getItemToLivingEntity(maid, stored.copy());
+                DeliveryUtil.deliverToMaidInv(maid, stored.copy());
                 container.removeItem(i, stored.getCount());
                 be.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
@@ -109,7 +109,7 @@ public abstract class FarmcharmHeatedCookTask<R extends Recipe<?>> extends Abstr
             if (putIn) {
                 maid.swing(InteractionHand.OFF_HAND);
             } else {
-                ItemUtils.getItemToLivingEntity(maid, take);
+                DeliveryUtil.deliverToMaidInv(maid, take);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] {} 满槽放料失败，原料已回包：{}", getUID(), request.id);
             }
         }

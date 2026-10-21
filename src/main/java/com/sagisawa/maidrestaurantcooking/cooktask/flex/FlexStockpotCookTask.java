@@ -9,7 +9,7 @@ import com.github.ysbbbbbb.kaleidoscopecookery.crafting.soupbase.SoupBaseManager
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModRecipes;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModSoupBases;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.cooktask.StockpotCookTask;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.FakePlayerUtils;
@@ -277,7 +277,7 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         pot.setChanged();
         level.setBlockAndUpdate(pos, level.getBlockState(pos).setValue(StockpotBlock.HAS_LID, false));
         maid.playSound(SoundEvents.LANTERN_BREAK, 0.5F, 0.5F);
-        ItemUtils.getItemToLivingEntity(maid, lid);
+        DeliveryUtil.deliverToMaidInv(maid, lid);
         maid.swing(InteractionHand.OFF_HAND);
     }
 }

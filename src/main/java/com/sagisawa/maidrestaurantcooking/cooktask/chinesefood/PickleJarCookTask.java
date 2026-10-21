@@ -6,7 +6,7 @@ import com.bmt.kaleidoscope_chinesefood.crafting.PickleJarRecipe;
 import com.bmt.kaleidoscope_chinesefood.init.ModBlocks;
 import com.bmt.kaleidoscope_chinesefood.init.ModRecipes;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.FakePlayerUtils;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
@@ -34,7 +34,7 @@ import java.util.function.Predicate;
  * <p>实证（2026-10-17）：4 格 ItemStackHandler（public 字段）；流程 = 开盖放料 →
  * 关盖（useWithoutItem 语义：OPEN=false + tryStartFermenting 决定 FERMENTING）→
  * tick 发酵 → 完成后槽内变产物（output.count*4 上限 16）。女仆流程：有产物即逐槽取
- * （直读 inventory + cookery ItemUtils 交给女仆，绕开 extractItem 需 Player 的限制，
+ * （直读 inventory + DeliveryUtil 交付入包，绕开 extractItem 需 Player 的限制，
  * 插料用 FakePlayer 规避同参）；无产物则投料 + 关盖 + 公共启动口 checkForValidRecipeAndTryStartFermenting。
  */
 public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarRecipe> {
@@ -133,7 +133,7 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
         for (int i = 0; i < jar.inventory.getSlots(); i++) {
             ItemStack stored = jar.inventory.getStackInSlot(i);
             if (!stored.isEmpty() && ItemStack.isSameItemSameComponents(stored, output)) {
-                ItemUtils.getItemToLivingEntity(maid, stored.copy());
+                DeliveryUtil.deliverToMaidInv(maid, stored.copy());
                 jar.inventory.setStackInSlot(i, ItemStack.EMPTY);
                 jar.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
@@ -174,7 +174,7 @@ public class PickleJarCookTask extends AbstractTimedContainerCookTask<PickleJarR
                     inserted = true;
                 } else {
                     // F-104：insertItem 未消耗传入栈（totalInserted=0 且无空槽）时回包
-                    ItemUtils.getItemToLivingEntity(maid, take);
+                    DeliveryUtil.deliverToMaidInv(maid, take);
                     MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 腌菜罐投料未落槽（槽满或被拒），原料已回包：{} @ {}", request.id, pos);
                 }
             }

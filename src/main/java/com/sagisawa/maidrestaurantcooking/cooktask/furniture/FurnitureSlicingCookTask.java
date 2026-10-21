@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.furniture;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -154,7 +154,7 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
             }
         } else {
             // F-144/F-153：板被占（他单在切）——还料+WARN（30s 窗）+设 30s 退避（窗内 cookTick 直接返回）
-            ItemUtils.getItemToLivingEntity(maid, take);
+            DeliveryUtil.deliverToMaidInv(maid, take);
             setBackoff(level, pos, 30_000L);
             if (System.currentTimeMillis() - busyLastWarnMs > 30_000L) {
                 busyLastWarnMs = System.currentTimeMillis();

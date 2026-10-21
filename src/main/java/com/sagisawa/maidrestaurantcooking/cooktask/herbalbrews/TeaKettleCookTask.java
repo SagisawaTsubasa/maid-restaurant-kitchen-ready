@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.herbalbrews;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -135,7 +135,7 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
             return;
         }
         if (!output.isEmpty()) {
-            ItemUtils.getItemToLivingEntity(maid, output.copy());
+            DeliveryUtil.deliverToMaidInv(maid, output.copy());
             kettle.removeItem(SLOT_OUTPUT, output.getCount());
             kettle.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
