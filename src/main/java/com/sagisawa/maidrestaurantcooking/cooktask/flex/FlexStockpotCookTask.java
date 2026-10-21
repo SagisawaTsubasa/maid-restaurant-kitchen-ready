@@ -59,6 +59,17 @@ public class FlexStockpotCookTask extends StockpotCookTask {
         return ModRecipes.FLEX_STOCKPOT_RECIPE;
     }
 
+    /**
+     * fork11.5 块A.4：厨具供给——上游 ICookTask.getKitchenWares() 默认空、StockpotCookTask 未覆写，
+     * flex 汤锅缺盖在「还缺什么」与发布闸两侧均为空列表，锅盖不进取料清单。覆写同款锅盖谓词
+     * （PotCookTask 锅铲先例 all.java:3985-3988 形态）；返回 List.of 不可变——契约（F-201）只约束
+     * getIngredients（cookState 对其原地 addAll），getKitchenWares 上游消费面为 addAll 进临时列表，安全。
+     */
+    @Override
+    public List<StackPredicate> getKitchenWares() {
+        return List.of(StackPredicate.of(ModItems.STOCKPOT_LID.get()));
+    }
+
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends Recipe<?>> recipeHolder, Level level) {
