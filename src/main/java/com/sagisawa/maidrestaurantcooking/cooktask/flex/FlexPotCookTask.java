@@ -187,19 +187,23 @@ public class FlexPotCookTask extends PotCookTask {
             MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炒锅内为非本单成品（{}），不取：{} @ {}", potResult.getItem(), request.id, pos);
             return;
         }
-        ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
         if (pot.hasCarrier()) {
             FlexPotRecipe recipe = ownerRecipe;
             ItemStack carrier = ItemHandlerUtils.tryExtractSingleSlot(
                     maid.getAvailableInv(false), pot.getResult().getCount(), StackPredicate.of(recipe.carrier()), true
             );
             if (!carrier.isEmpty()) {
+                // R2-6（复验 2026-10-21）：快照取在 carrier 提取之后——getAvailableInv(false) 含手槽，
+                // carrier 可能恰从主手抽出；快照若在提取前，会把「提取导致的主手变化」并入 BE 交付
+                // 判据，边缘情形成品落「手占→掉地」。else 分支无提取、各自快照。
+                ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                 pot.takeOutProduct(level, maid, carrier);
                 DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // BE 内部旧交付（Pot javap takeOutProduct:1188/1262/1363）成品+容器收接
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             }
         } else {
+            ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
             pot.takeOutProduct(level, maid, new ItemStack((ItemLike) ModItems.KITCHEN_SHOVEL.get()));
             DeliveryUtil.reclaimDeliveredMainHand(maid, handRef); // 铲子回手收接（同上）
             maid.swing(InteractionHand.OFF_HAND);

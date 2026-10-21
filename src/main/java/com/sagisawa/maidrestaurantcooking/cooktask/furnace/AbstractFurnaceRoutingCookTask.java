@@ -152,7 +152,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         ItemStack output = furnace.getItem(2);
         if (!output.isEmpty() && output.getItem() == expectResult.getItem()) {
             ItemStack taken = furnace.removeItem(2, output.getCount());
-            deliverToMaid(maid, taken);
+            DeliveryUtil.deliverToMaidInv(maid, taken);
             maid.swing(InteractionHand.OFF_HAND);
             request.remain--;
             return;
@@ -219,10 +219,6 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             noFuelLastWarnMs = System.currentTimeMillis();
             MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
         }
-    }
-
-    private static void deliverToMaid(EntityMaid maid, ItemStack stack) {
-        DeliveryUtil.deliverToMaidInv(maid, stack);
     }
 
     @Override
