@@ -120,6 +120,18 @@ public class FlexStockpotCookTask extends StockpotCookTask {
                 ans.add(pot.getSoupBase().getDisplayStack());
             }
 
+            // 复验 F-701：厨具面 getCurrentInput 覆写需自带「已装锅盖」追加——fork 仓
+            // StockpotCookTaskKitchenWaresMixin 的 TAIL 只注入上游 StockpotCookTask 本体方法，
+            // 子类覆写（本方法）动态分派时不经过 mixin。缺此段时 flex 汤锅盖盖后（盖唯一实例
+            // 挂在锅上、不在任何背包/容器）非营业 MaidStateManager.cookState 的 required 含盖
+            //（本类 getKitchenWares 覆写返回盖谓词）而 handler 视图无盖 → 恒 STORAGE，
+            // tickState0/1 的 takeLid 又要求 COOK 才能跑到 → 死锁。形态与 fork mixin TAIL 同款。
+            if (pot.hasLid()) {
+                ans.add(pot.getLidItem().isEmpty()
+                        ? ModItems.STOCKPOT_LID.get().getDefaultInstance()
+                        : pot.getLidItem().copy());
+            }
+
             if (pot.getStatus() == 3) {
                 // F-1：不再引用本体 mod 的 mixin accessor 类——mixin 配置定义的类禁止普通代码
                 // 直接类加载（sponge-mixin IllegalClassLoadError，同名机制已在 business 服崩实证），
