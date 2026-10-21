@@ -1,6 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.flex;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.ysbbbbbb.kaleidoscopecookery.api.blockentity.IStockpot;
 import com.github.ysbbbbbb.kaleidoscopecookery.api.recipe.soupbase.ISoupBase;
 import com.github.ysbbbbbb.kaleidoscopecookery.block.kitchen.StockpotBlock;
 import com.github.ysbbbbbb.kaleidoscopecookery.blockentity.kitchen.StockpotBlockEntity;
@@ -111,6 +112,22 @@ public class FlexStockpotCookTask extends StockpotCookTask {
     public List<ItemStack> getCurrentInput(Level level, BlockPos pos, EntityMaid maid) {
         List<ItemStack> ans = new ArrayList<>();
         if (level.getBlockEntity(pos) instanceof StockpotBlockEntity pot) {
+            // 复验 R3 F-710：空锅守卫（与 fork 仓 StockpotCookTaskMixin 的 HEAD 定值同款）——
+            // 本覆写逐句复制上游 StockpotCookTask.getCurrentInput（0.2.9 :87-107）且不经父类
+            // mixin，F-701 只在此追加了盖、没补父类 mixin 的「status=PUT_SOUP_BASE 早退」，
+            // 于是空锅默认 soupBase=WATER 的 display 栈把 cookState 误判成 COOK（假汤底）→
+            // 非营业 flex 汤锅女仆走到锅前后 tickState0 从背包取不到汤底 → 空转/看门狗回队重演。
+            // status=0 时定值：带盖仅 [盖]（盖是 getKitchenWares required 面的真实挂点，必须
+            // 可见——同 fork mixin 语义），无盖空列表；display/getInputs 在 status=0 恒不采信
+            //（食材只能在 PUT_INGREDIENT 后放入）。
+            if (pot.getStatus() == IStockpot.PUT_SOUP_BASE) {
+                if (pot.hasLid()) {
+                    ans.add(pot.getLidItem().isEmpty()
+                            ? ModItems.STOCKPOT_LID.get().getDefaultInstance()
+                            : pot.getLidItem().copy());
+                }
+                return ans;
+            }
             ans.addAll(pot.getInputs().stream().filter(s -> !s.isEmpty()).toList());
             if (pot.getSoupBase() != null) {
                 ans.add(pot.getSoupBase().getDisplayStack());
