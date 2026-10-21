@@ -152,7 +152,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         ItemStack output = furnace.getItem(2);
         if (!output.isEmpty() && output.getItem() == expectResult.getItem()) {
             ItemStack taken = furnace.removeItem(2, output.getCount());
-            ItemHandlerHelperGive(maid, taken);
+            deliverToMaid(maid, taken);
             maid.swing(InteractionHand.OFF_HAND);
             request.remain--;
             return;
@@ -221,7 +221,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         }
     }
 
-    private static void ItemHandlerHelperGive(EntityMaid maid, ItemStack stack) {
+    private static void deliverToMaid(EntityMaid maid, ItemStack stack) {
         DeliveryUtil.deliverToMaidInv(maid, stack);
     }
 

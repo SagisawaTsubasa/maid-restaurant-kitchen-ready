@@ -119,7 +119,10 @@ public class BambooTrayCookTask implements ICookTask {
         for (int slot = 0; slot < tray.getContainerSize(); slot++) {
             ItemStack stored = tray.getItem(slot);
             if (!stored.isEmpty() && ItemStack.isSameItemSameComponents(stored, recipe.getResult())) {
+                ItemStack handRef = DeliveryUtil.snapshotMainHand(maid);
                 tray.onTakeOut(level, maid, slot, true);
+                // BE 内部走森罗旧交付（BambooTray javap onTakeOut:425 旧交付工具调用）——主手新增即收接
+                DeliveryUtil.reclaimDeliveredMainHand(maid, handRef);
                 maid.swing(net.minecraft.world.InteractionHand.OFF_HAND);
                 request.remain--;
                 return;
