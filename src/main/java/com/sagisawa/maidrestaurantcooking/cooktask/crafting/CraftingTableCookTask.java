@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.crafting;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.data.TagBlock;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
@@ -348,12 +348,12 @@ public class CraftingTableCookTask implements ICookTask {
             errorStall("crafting-result-empty:" + request.id + ":" + maid.getUUID(), "合成台配方产物为空，原料已回包：{} @ {}", request.id, pos);
             return;
         }
-        ItemUtils.getItemToLivingEntity(maid, result);
+        DeliveryUtil.deliverToMaidInv(maid, result);
 
         // 容器返还（牛奶桶→空桶等）：1.21.1 Recipe.getRemainingItems(input) 无 Level 参数
         for (ItemStack remainder : recipe.getRemainingItems(input)) {
             if (!remainder.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, remainder);
+                DeliveryUtil.deliverToMaidInv(maid, remainder);
             }
         }
 
@@ -367,7 +367,7 @@ public class CraftingTableCookTask implements ICookTask {
     /** 已抽原料回包（满槽/缺料/matches 失败共用收口）。 */
     private void rollback(EntityMaid maid, List<ItemStack> extracted) {
         for (ItemStack stack : extracted) {
-            ItemUtils.getItemToLivingEntity(maid, stack);
+            DeliveryUtil.deliverToMaidInv(maid, stack);
         }
     }
 

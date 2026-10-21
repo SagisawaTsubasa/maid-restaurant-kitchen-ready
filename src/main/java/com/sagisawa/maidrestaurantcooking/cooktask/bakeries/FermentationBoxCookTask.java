@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.bakeries;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -123,7 +123,7 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
         for (int i = 0; i < box.getContainerSize(); i++) {
             ItemStack stored = box.getItem(i);
             if (!stored.isEmpty() && stored.getItem() == result.getItem()) {
-                ItemUtils.getItemToLivingEntity(maid, stored.copy());
+                DeliveryUtil.deliverToMaidInv(maid, stored.copy());
                 box.removeItem(i, stored.getCount());
                 box.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
@@ -163,7 +163,7 @@ public class FermentationBoxCookTask extends AbstractTimedContainerCookTask<Ferm
                 return;
             }
         }
-        ItemUtils.getItemToLivingEntity(maid, take);
+        DeliveryUtil.deliverToMaidInv(maid, take);
         MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] fermentation_box 满槽放料失败，原料已回包：{}", request.id);
     }
 }

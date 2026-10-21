@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.fd;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
@@ -129,7 +129,7 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
                 ItemStack remain = board.addItem(take);
                 if (!remain.isEmpty()) {
                     // F-013：addItem 返回未接纳部分——退回女仆包
-                    ItemUtils.getItemToLivingEntity(maid, remain);
+                    DeliveryUtil.deliverToMaidInv(maid, remain);
                 } else {
                     maid.swing(InteractionHand.OFF_HAND);
                 }
@@ -145,7 +145,7 @@ public class FDCuttingBoardCookTask extends AbstractTimedContainerCookTask<Cutti
         boolean processed = board.processStoredItemUsingTool(tool, null);
         if (!tool.isEmpty()) {
             // 未损耗完的工具回女仆包
-            ItemUtils.getItemToLivingEntity(maid, tool);
+            DeliveryUtil.deliverToMaidInv(maid, tool);
         }
         if (processed) {
             maid.swing(InteractionHand.OFF_HAND);

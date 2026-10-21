@@ -4,7 +4,7 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.ysbbbbbb.kaleidoscopecookery.blockentity.kitchen.ChoppingBoardBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopecookery.crafting.recipe.ChoppingBoardRecipe;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModItems;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.tag.TagMod;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
@@ -113,7 +113,7 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
             if (board.onPutItem(level, maid, take)) {
                 maid.swing(InteractionHand.OFF_HAND);
             } else {
-                ItemUtils.getItemToLivingEntity(maid, take);
+                DeliveryUtil.deliverToMaidInv(maid, take);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 菜板放料被拒，原料已回包：{} @ {}", request.id, pos);
             }
             return;

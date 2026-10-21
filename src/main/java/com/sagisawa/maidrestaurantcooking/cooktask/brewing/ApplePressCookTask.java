@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.brewing;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -115,7 +115,7 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
         for (int i = 0; i < press.getContainerSize(); i++) {
             ItemStack stored = press.getItem(i);
             if (!stored.isEmpty() && stored.getItem() == expect.getItem()) {
-                ItemUtils.getItemToLivingEntity(maid, stored.copy());
+                DeliveryUtil.deliverToMaidInv(maid, stored.copy());
                 press.removeItem(i, stored.getCount());
                 press.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
@@ -152,7 +152,7 @@ public class ApplePressCookTask extends AbstractTimedContainerCookTask<ApplePres
                     }
                 }
                 if (!putIn) {
-                    ItemUtils.getItemToLivingEntity(maid, take);
+                    DeliveryUtil.deliverToMaidInv(maid, take);
                     MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] apple_press 满槽放料失败，原料已回包：{}", request.id);
                 }
             }

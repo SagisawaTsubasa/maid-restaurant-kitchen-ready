@@ -15,6 +15,7 @@ import com.mastermarisa.maid_restaurant.utils.SearchUtils;
 import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
 import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.sagisawa.maidrestaurantcooking.utils.RecipeDataFilter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -265,7 +266,7 @@ public class TeapotCookTask implements ICookTask {
     private static void placeTeapot(ServerLevel level, BlockPos pos, ItemStack teapotItem, EntityMaid maid) {
         if (!(teapotItem.getItem() instanceof BlockItem blockItem)) {
             // 抽取前已验茶壶 BlockItem，此处纯防御：回包防吞
-            com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, teapotItem);
+            DeliveryUtil.deliverToMaidInv(maid, teapotItem);
             MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶放置防御分支触发，物品已回包 @ {}", pos);
             return;
         }
@@ -278,7 +279,7 @@ public class TeapotCookTask implements ICookTask {
             MaidRestaurantCooking.LOGGER.debug("[kitchen-ready] 女仆补放茶壶 @ {}", pos);
         } else {
             // F-102：place 失败（落位被占/状态拒绝）——已抽取的茶壶必须回包
-            com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils.getItemToLivingEntity(maid, teapotItem);
+            DeliveryUtil.deliverToMaidInv(maid, teapotItem);
             MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶补放失败，物品已回包 @ {}", pos);
         }
     }

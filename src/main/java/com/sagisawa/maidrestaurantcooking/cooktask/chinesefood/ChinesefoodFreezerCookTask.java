@@ -4,7 +4,7 @@ import com.bmt.kaleidoscope_chinesefood.block.entity.FreezerBlockEntity;
 import com.bmt.kaleidoscope_chinesefood.crafting.BaseProcessingRecipe;
 import com.bmt.kaleidoscope_chinesefood.init.ModBlocks;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -119,7 +119,7 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
         for (int i = 0; i < be.getContainerSize(); i++) {
             ItemStack stored = be.getItem(i);
             if (!stored.isEmpty() && ItemStack.isSameItemSameComponents(stored, output)) {
-                ItemUtils.getItemToLivingEntity(maid, stored.copy());
+                DeliveryUtil.deliverToMaidInv(maid, stored.copy());
                 be.removeItem(i, stored.getCount());
                 be.setChanged();
                 maid.swing(InteractionHand.OFF_HAND);
@@ -159,7 +159,7 @@ public abstract class ChinesefoodFreezerCookTask extends AbstractTimedContainerC
                 return;
             }
         }
-        ItemUtils.getItemToLivingEntity(maid, take);
+        DeliveryUtil.deliverToMaidInv(maid, take);
         MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 满槽放料失败，原料已回包：{}", request.id);
     }
 

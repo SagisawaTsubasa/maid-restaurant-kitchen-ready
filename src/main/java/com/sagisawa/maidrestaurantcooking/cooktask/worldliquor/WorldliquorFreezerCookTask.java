@@ -5,7 +5,7 @@ import com.bmt.kaleidoscope_world_liquor.block.FreezerBlock;
 import com.bmt.kaleidoscope_world_liquor.crafting.FreezerRecipe;
 import com.bmt.kaleidoscope_world_liquor.init.ModRecipes;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -166,7 +166,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
         if (!output.isEmpty()) {
             ItemStack taken = freezer.outputInventory.extractItem(0, output.getCount(), false);
             if (!taken.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, taken);
+                DeliveryUtil.deliverToMaidInv(maid, taken);
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             }
@@ -190,7 +190,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             IFluidHandlerItem cap = take.getCapability(Capabilities.FluidHandler.ITEM);
             if (cap == null) {
                 // 谓词已滤 fluid 容器，此处为防御：容器回包
-                ItemUtils.getItemToLivingEntity(maid, take);
+                DeliveryUtil.deliverToMaidInv(maid, take);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 注液容器无 fluid capability，已回包：{}", request.id);
                 return;
             }
@@ -199,12 +199,12 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             int preview = freezer.tank.fill(need.copy(), IFluidHandler.FluidAction.SIMULATE);
             if (preview <= 0) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer SIMULATE {}/{} 罐内异液或容量不足，跳过注液：{}", preview, need.getAmount(), request.id);
-                ItemUtils.getItemToLivingEntity(maid, take);
+                DeliveryUtil.deliverToMaidInv(maid, take);
                 return;
             }
             FluidStack drained = cap.drain(need.copy(), IFluidHandler.FluidAction.EXECUTE);
             // 所有分支统一回包（F-001）：drain 已就地改写容器，满载接受时空桶即正确产物，必须归还
-            ItemUtils.getItemToLivingEntity(maid, take);
+            DeliveryUtil.deliverToMaidInv(maid, take);
             if (drained.isEmpty()) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] freezer 注液 drain 未成，容器已回包：{}", request.id);
                 return;
@@ -253,7 +253,7 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
                 }
             }
             if (!putIn) {
-                ItemUtils.getItemToLivingEntity(maid, material);
+                DeliveryUtil.deliverToMaidInv(maid, material);
                 setBackoff(level, pos, 30_000L);
                 if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                     stallLastWarnMs = System.currentTimeMillis();

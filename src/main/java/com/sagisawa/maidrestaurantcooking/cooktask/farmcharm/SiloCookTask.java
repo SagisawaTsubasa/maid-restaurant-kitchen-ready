@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.farmcharm;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -124,14 +124,14 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
         ItemStack out = controller.tryRemoveItem();
         if (!out.isEmpty()) {
             if (out.getItem() == recipe.getOutput().getItem()) {
-                ItemUtils.getItemToLivingEntity(maid, out);
+                DeliveryUtil.deliverToMaidInv(maid, out);
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
                 return;
             }
             // 非本配方产物（其他来源残留）：回塞；F-103 容量满时回包防吞
             if (!controller.tryAddItem(out)) {
-                ItemUtils.getItemToLivingEntity(maid, out);
+                DeliveryUtil.deliverToMaidInv(maid, out);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 筒仓残留产物回塞失败（容量满），已回包：{} @ {}", out.getItem(), pos);
             }
         }
@@ -142,7 +142,7 @@ public class SiloCookTask extends AbstractTimedContainerCookTask<SiloRecipe> {
             if (controller.tryAddItem(take)) {
                 maid.swing(InteractionHand.OFF_HAND);
             } else {
-                ItemUtils.getItemToLivingEntity(maid, take);
+                DeliveryUtil.deliverToMaidInv(maid, take);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 筒仓已满，鲜料回包：{} @ {}", request.id, pos);
             }
         }

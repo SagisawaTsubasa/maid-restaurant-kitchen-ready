@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.dd;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -162,12 +162,12 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
             }
             ItemStack served = pot.useHeldItemOnMeal(bowl);
             if (!served.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, served);
+                DeliveryUtil.deliverToMaidInv(maid, served);
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             } else {
                 // F-162：容器不符（配方实际用其他容器）——碗退回女仆包并响出
-                ItemUtils.getItemToLivingEntity(maid, bowl);
+                DeliveryUtil.deliverToMaidInv(maid, bowl);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 怪物锅上菜容器被拒，碗已回包：{} @ {}", request.id, pos);
             }
             return;
@@ -206,7 +206,7 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                 }
                 if (!putIn) {
                     // F-003+F-156/F-160：按本次放入判定归还；锅满设站点退避+响出（30s 窗）
-                    ItemUtils.getItemToLivingEntity(maid, take);
+                    DeliveryUtil.deliverToMaidInv(maid, take);
                     setBackoff(level, pos, 30_000L);
                     if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
                         stallLastWarnMs = System.currentTimeMillis();

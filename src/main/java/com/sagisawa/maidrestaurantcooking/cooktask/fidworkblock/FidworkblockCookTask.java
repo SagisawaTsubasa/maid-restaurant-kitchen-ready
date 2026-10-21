@@ -11,7 +11,7 @@ import com.fidtest.block.entity.TeapotBlockEntity;
 import com.fidtest.block.entity.WokBlockEntity;
 import com.fidtest.recipe.CookingRecipe;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.BlockUsageManager;
@@ -472,7 +472,7 @@ public class FidworkblockCookTask implements ICookTask {
         if (m.hasOutput()) {
             ItemStack out = m.collectOutput();
             if (!out.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, out);
+                DeliveryUtil.deliverToMaidInv(maid, out);
                 request.remain--;
                 maid.swing(InteractionHand.OFF_HAND);
             }
@@ -487,7 +487,7 @@ public class FidworkblockCookTask implements ICookTask {
             if (requiredIngredients(recipe).stream().noneMatch(i -> i.test(onTable))) {
                 ItemStack back = m.removeInput();
                 if (!back.isEmpty()) {
-                    ItemUtils.getItemToLivingEntity(maid, back);
+                    DeliveryUtil.deliverToMaidInv(maid, back);
                 }
                 warnStall("residue:squeezingmachine", pos, "fidworkblock 压榨机台面存在与本单不符的料（{}），已退料回包：{} @ {}",
                         onTable.getItem(), request.id, pos);
@@ -500,7 +500,7 @@ public class FidworkblockCookTask implements ICookTask {
             }
             ItemStack remainder = m.addInput(take);
             if (!remainder.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, remainder);
+                DeliveryUtil.deliverToMaidInv(maid, remainder);
                 warnStall("insert-reject:squeezingmachine", pos, "fidworkblock 压榨机投料被拒（{}），原料已回包：{} @ {}",
                         remainder.getItem(), request.id, pos);
                 return;
@@ -510,7 +510,7 @@ public class FidworkblockCookTask implements ICookTask {
             // 投料与配方不符（不该发生：按配方抽取+台面校验）；退料回包 + 响出
             ItemStack back = m.removeInput();
             if (!back.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, back);
+                DeliveryUtil.deliverToMaidInv(maid, back);
             }
             warnStall("start-fail:squeezingmachine", pos, "fidworkblock 压榨机 startProcessing 失败，已退料回包：{} @ {}", request.id, pos);
         }
@@ -527,7 +527,7 @@ public class FidworkblockCookTask implements ICookTask {
         if (isProcessingDone.getAsBoolean() && !inv.getStackInSlot(outputSlot).isEmpty()) {
             ItemStack out = collectOutput.get();
             if (!out.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, out);
+                DeliveryUtil.deliverToMaidInv(maid, out);
                 request.remain--;
                 maid.swing(InteractionHand.OFF_HAND);
             }
@@ -564,7 +564,7 @@ public class FidworkblockCookTask implements ICookTask {
                 ItemStack remainder = addItem.apply(take);
                 if (!remainder.isEmpty()) {
                     setChanged.run(); // F-186：本 tick 已成功投入的部分先置脏再退
-                    ItemUtils.getItemToLivingEntity(maid, remainder);
+                    DeliveryUtil.deliverToMaidInv(maid, remainder);
                     warnStall("insert-reject:" + name, pos, "fidworkblock {} 投料被拒（{}），原料已回包：{} @ {}",
                             name, remainder.getItem(), request.id, pos);
                     return;
@@ -592,7 +592,7 @@ public class FidworkblockCookTask implements ICookTask {
             ItemStack slotStack = inv.getStackInSlot(i);
             if (!slotStack.isEmpty()) {
                 inv.setStackInSlot(i, ItemStack.EMPTY);
-                ItemUtils.getItemToLivingEntity(maid, slotStack);
+                DeliveryUtil.deliverToMaidInv(maid, slotStack);
                 cleared = true;
             }
         }
@@ -618,7 +618,7 @@ public class FidworkblockCookTask implements ICookTask {
             if (!taken.isEmpty()) {
                 // F-173：removeItem 仅在槽清空时置脏（字节码实证），取货侧对称补 setChanged
                 c.setChanged();
-                ItemUtils.getItemToLivingEntity(maid, taken);
+                DeliveryUtil.deliverToMaidInv(maid, taken);
                 request.remain--;
                 maid.swing(InteractionHand.OFF_HAND);
             }
@@ -647,7 +647,7 @@ public class FidworkblockCookTask implements ICookTask {
                 ItemStack slotStack = c.getItem(inputStart + i);
                 if (!slotStack.isEmpty()) {
                     c.setItem(inputStart + i, ItemStack.EMPTY);
-                    ItemUtils.getItemToLivingEntity(maid, slotStack);
+                    DeliveryUtil.deliverToMaidInv(maid, slotStack);
                 }
             }
             c.setChanged();
@@ -676,7 +676,7 @@ public class FidworkblockCookTask implements ICookTask {
                 }
             }
             if (!putIn) {
-                ItemUtils.getItemToLivingEntity(maid, take);
+                DeliveryUtil.deliverToMaidInv(maid, take);
                 warnStall("insert-reject:stove", pos, "fidworkblock 炉灶系输入槽满，原料已回包：{} @ {}", request.id, pos);
                 return;
             }
@@ -718,7 +718,7 @@ public class FidworkblockCookTask implements ICookTask {
                 // F-174（javap 实证：WokBlockEntity.addItem 为 void，无 remainder 可核）——
                 // 收口点是前置 canAddItem()（BE 内含满/非配方料判定）
                 if (!w.canAddItem()) {
-                    ItemUtils.getItemToLivingEntity(maid, take);
+                    DeliveryUtil.deliverToMaidInv(maid, take);
                     warnStall("insert-reject:wok", pos, "fidworkblock 炒锅投料被拒（满/非配方料），原料已回包：{} @ {}", request.id, pos);
                     return;
                 }
@@ -772,7 +772,7 @@ public class FidworkblockCookTask implements ICookTask {
             }
             ItemStack remainder = cb.addItem(take);
             if (!remainder.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, remainder);
+                DeliveryUtil.deliverToMaidInv(maid, remainder);
             }
             cb.setChanged();
             return;
@@ -782,7 +782,7 @@ public class FidworkblockCookTask implements ICookTask {
         if (requiredIngredients(recipe).stream().noneMatch(i -> i.test(onTable))) {
             ItemStack back = cb.removeItem();
             if (!back.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, back);
+                DeliveryUtil.deliverToMaidInv(maid, back);
             }
             warnStall("residue:choppingboard", pos, "fidworkblock 砧板台面存在与本单不符的料（{}），已退料回包：{} @ {}",
                     onTable.getItem(), request.id, pos);
@@ -801,7 +801,7 @@ public class FidworkblockCookTask implements ICookTask {
             return;
         }
         boolean done = cb.processWithTool(held, null); // ServerPlayer @Nullable 原版判空，null 安全
-        ItemUtils.getItemToLivingEntity(maid, held); // 刀回包（耐久损耗已在 BE 内部原地完成——doProcess hurtAndBreak 字节码实证）
+        DeliveryUtil.deliverToMaidInv(maid, held); // 刀回包（耐久损耗已在 BE 内部原地完成——doProcess hurtAndBreak 字节码实证）
         if (done) {
             cb.setChanged();
             request.remain--; // 产物 ItemEntity 落地，拾取 AI 收集（FD 砧板同款）
@@ -820,7 +820,7 @@ public class FidworkblockCookTask implements ICookTask {
                     fp.getOutputItem().getCount(), false);
             if (!out.isEmpty()) {
                 fp.setChanged(); // F-186：与炉灶系取货对称
-                ItemUtils.getItemToLivingEntity(maid, out);
+                DeliveryUtil.deliverToMaidInv(maid, out);
                 request.remain--;
                 maid.swing(InteractionHand.OFF_HAND);
             }
@@ -839,7 +839,7 @@ public class FidworkblockCookTask implements ICookTask {
             if (requiredIngredients(recipe).stream().noneMatch(i -> i.test(onTable))) {
                 ItemStack back = fp.removeIngredient();
                 if (!back.isEmpty()) {
-                    ItemUtils.getItemToLivingEntity(maid, back);
+                    DeliveryUtil.deliverToMaidInv(maid, back);
                 }
                 warnStall("residue:fryingpan", pos, "fidworkblock 炸锅台面存在与本单不符的料（{}），已退料回包：{} @ {}",
                         onTable.getItem(), request.id, pos);
@@ -860,7 +860,7 @@ public class FidworkblockCookTask implements ICookTask {
             }
             ItemStack remainder = fp.addOil(held);
             if (!remainder.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, remainder);
+                DeliveryUtil.deliverToMaidInv(maid, remainder);
             }
             fp.setChanged();
         }
@@ -871,7 +871,7 @@ public class FidworkblockCookTask implements ICookTask {
             }
             ItemStack remainder = fp.addIngredient(take);
             if (!remainder.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, remainder);
+                DeliveryUtil.deliverToMaidInv(maid, remainder);
             }
             fp.setChanged();
         }
@@ -897,7 +897,7 @@ public class FidworkblockCookTask implements ICookTask {
             }
             ItemStack remainder = mo.addItem(take);
             if (!remainder.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, remainder);
+                DeliveryUtil.deliverToMaidInv(maid, remainder);
             }
             mo.setChanged();
             return;
@@ -910,7 +910,7 @@ public class FidworkblockCookTask implements ICookTask {
         } else {
             ItemStack back = mo.removeItem();
             if (!back.isEmpty()) {
-                ItemUtils.getItemToLivingEntity(maid, back);
+                DeliveryUtil.deliverToMaidInv(maid, back);
             }
             warnStall("process-fail:mortar", pos, "fidworkblock 研钵加工失败（料与本单不符），已退料回包：{} @ {}", request.id, pos);
         }

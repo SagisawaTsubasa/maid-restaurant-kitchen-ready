@@ -5,7 +5,7 @@ import com.github.ysbbbbbb.kaleidoscopecookery.blockentity.kitchen.BambooTrayBlo
 import com.github.ysbbbbbb.kaleidoscopecookery.crafting.recipe.BambooTrayRecipe;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopecookery.init.ModRecipes;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.BlockUsageManager;
@@ -156,7 +156,7 @@ public class BambooTrayCookTask implements ICookTask {
                 return;
             }
         }
-        ItemUtils.getItemToLivingEntity(maid, input);
+        DeliveryUtil.deliverToMaidInv(maid, input);
         MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] bamboo_tray 满槽放料失败，原料已回包：{}", request.id);
     }
 

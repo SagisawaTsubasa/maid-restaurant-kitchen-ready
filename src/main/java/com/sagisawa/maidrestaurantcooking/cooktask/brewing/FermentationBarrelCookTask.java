@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.brewing;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -119,7 +119,7 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
             return;
         }
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
-            ItemUtils.getItemToLivingEntity(maid, output.copy());
+            DeliveryUtil.deliverToMaidInv(maid, output.copy());
             barrel.removeItem(FermentationBarrelBlockEntity.OUTPUT_SLOT_GENERAL, output.getCount());
             barrel.setChanged();
             maid.swing(InteractionHand.OFF_HAND);

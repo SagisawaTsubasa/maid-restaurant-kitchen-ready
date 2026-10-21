@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.brewing;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -100,12 +100,12 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
         ItemStack beer = station.getBeer();
         if (beer != null && !beer.isEmpty()) {
             if (beer.getItem() == recipe.getResultItem(level.registryAccess()).getItem()) {
-                ItemUtils.getItemToLivingEntity(maid, beer);
+                DeliveryUtil.deliverToMaidInv(maid, beer);
                 maid.swing(InteractionHand.OFF_HAND);
                 request.remain--;
             } else {
                 // F-016：他单残留成品酒——交女仆不吞，但响出来便于发现混单
-                ItemUtils.getItemToLivingEntity(maid, beer);
+                DeliveryUtil.deliverToMaidInv(maid, beer);
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] brewstation 取到非本单成品（可能他单残留）：{} @ {}", beer.getItem(), request.id);
             }
             return;
@@ -123,7 +123,7 @@ public class BrewstationCookTask extends AbstractTimedContainerCookTask<net.sati
                     maid.swing(InteractionHand.OFF_HAND);
                 } else {
                     // F-013：投料被拒（槽满/不符）——原料回包
-                    ItemUtils.getItemToLivingEntity(maid, take);
+                    DeliveryUtil.deliverToMaidInv(maid, take);
                     MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 酿酒台投料被拒，原料回包：{} @ {}", request.id, pos);
                 }
             }

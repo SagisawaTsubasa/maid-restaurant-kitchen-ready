@@ -1,7 +1,7 @@
 package com.sagisawa.maidrestaurantcooking.cooktask.brewing;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -108,7 +108,7 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
             return;
         }
         if (!output.isEmpty() && output.getItem() == expect.getItem()) {
-            ItemUtils.getItemToLivingEntity(maid, output.copy());
+            DeliveryUtil.deliverToMaidInv(maid, output.copy());
             bar.removeItem(0, output.getCount());
             bar.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
@@ -144,7 +144,7 @@ public class PalmBarCookTask extends AbstractTimedContainerCookTask<PalmBarRecip
                     }
                 }
                 if (!putIn) {
-                    ItemUtils.getItemToLivingEntity(maid, take);
+                    DeliveryUtil.deliverToMaidInv(maid, take);
                     MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] palm_bar 满槽放料失败，原料已回包：{}", request.id);
                 }
             }

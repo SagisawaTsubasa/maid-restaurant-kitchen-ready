@@ -5,7 +5,7 @@ import com.flavor_immersed_daily.recipe.FridgeFreezingRecipe;
 import com.flavor_immersed_daily.recipe.FridgeTemperingRecipe;
 import com.flavor_immersed_daily.recipe.ModRecipes;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.ysbbbbbb.kaleidoscopecookery.util.ItemUtils;
+import com.sagisawa.maidrestaurantcooking.utils.DeliveryUtil;
 import com.mastermarisa.maid_restaurant.request.CookRequest;
 import com.mastermarisa.maid_restaurant.utils.ItemHandlerUtils;
 import com.mastermarisa.maid_restaurant.utils.component.StackPredicate;
@@ -111,7 +111,7 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
             return;
         }
         if (!output.isEmpty() && output.getItem() == result.getItem()) {
-            ItemUtils.getItemToLivingEntity(maid, output.copy());
+            DeliveryUtil.deliverToMaidInv(maid, output.copy());
             fridge.removeItem(outputSlot(), output.getCount());
             fridge.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
