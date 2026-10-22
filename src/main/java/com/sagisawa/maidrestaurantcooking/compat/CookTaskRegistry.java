@@ -21,9 +21,7 @@ import com.sagisawa.maidrestaurantcooking.cooktask.furniture.FurnitureSlicingCoo
 import com.sagisawa.maidrestaurantcooking.cooktask.farmcharm.StoveCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fid.FidFridgeCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.fidworkblock.FidworkblockCookTask;
-import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexPotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.furnace.FurnaceRoutingCookTasks;
-import com.sagisawa.maidrestaurantcooking.cooktask.flex.FlexStockpotCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.herbalbrews.TeaKettleCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.BambooTrayCookTask;
 import com.sagisawa.maidrestaurantcooking.cooktask.kaleidoscope.ChoppingBoardCookTask;
@@ -57,13 +55,12 @@ public final class CookTaskRegistry {
 
     /**
      * mod 构造期调用：按门控把全部任务入本体暂存队列。
-     * M1：森罗 flex 两类（必需链常在）；M2+ 各家族追加。
+     * M1：森罗三类（竹匾/茶壶/菜板，必需链常在）；M2+ 各家族追加。
+     * flex 模糊配方两类永不接（2026-10-22 用户决议，归属本体上游/营业中 fork）。
      */
     public static void registerAll() {
-        // 森罗 flex（T1 打样）：本体硬依赖链，KALEIDOSCOPE_COOKERY 恒真，门控保留为纪律示范
+        // 森罗（T1 打样）：本体硬依赖链，KALEIDOSCOPE_COOKERY 恒真，门控保留为纪律示范
         if (CompatMods.KALEIDOSCOPE_COOKERY) {
-            registerTask(new FlexPotCookTask());
-            registerTask(new FlexStockpotCookTask());
             // M2 森罗余量：竹匾（自环境计时）、茶壶（注液+补放闭环）
             registerTask(new BambooTrayCookTask());
             registerTask(new TeapotCookTask());
