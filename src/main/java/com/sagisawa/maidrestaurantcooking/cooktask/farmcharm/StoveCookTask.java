@@ -62,11 +62,11 @@ public class StoveCookTask extends AbstractTimedContainerCookTask<StoveRecipe> {
         return pos -> level.getBlockEntity(pos) instanceof StoveBlockEntity;
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
         StoveRecipe recipe = (StoveRecipe) recipeHolder.value();
         // F-142：燃料进取料单（女仆会主动去取的物品语义，对照 TeaKettle 水/燃料先例）
-        /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
         java.util.List<StackPredicate> ans = recipe.getIngredients().stream()
                 .filter(i -> !i.isEmpty()).map(StackPredicate::new)
                 .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));

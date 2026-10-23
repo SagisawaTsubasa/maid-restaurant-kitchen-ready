@@ -241,13 +241,22 @@ public class CraftingTableCookTask implements ICookTask {
      *       营业单 targets[0]=凳邻位 marker）——恒真会让「凳在发布后被拆」的失效工位永远过检，
      *       mixin 不回退→营业单挂 ASSIGNED 硬超时。</li>
      * </ul>
-     * 快速通过（0.2.3 F-197 收窄为仅坐标相等）：就坐路径 pos=搜索时的 maid.blockPosition()、
-     * 站立到达后 blockPosition==marker，两路径天然覆盖；删除 isPassenger() 恒过分支——骑坐中
-     * 校验外部 marker 不再恒过，车辆移位/工位失效即 false（fork CookingTargetRedirector
-     * 活性校验与 pos 重新耦合）。
+     * 快速通过（0.2.3 F-197 收窄为仅坐标相等）：仅就坐路径天然命中（pos=搜索时的
+     * maid.blockPosition()）；站立路径女仆落座在凳（chair）而非工位 marker（本体 accept
+     * 落座写 CHAIR_POS，all.java:5766-5789），blockPosition==marker 对站立恒假、站立有效性
+     * 实际由 hasSeatNeighbor 兜住——勿因「快速通道未覆盖站立」误删 hasSeatNeighbor（F-205）。
+     * 0.2.3 已删除 isPassenger() 恒过分支——骑坐中校验外部 marker 不再恒过，车辆移位/工位
+     * 失效即 false（fork CookingTargetRedirector 活性校验与 pos 重新耦合）。
+     *
+     * <p>maid=null 契约（0.2.4 审计 NPE 随批清偿）：fork CookingBridge.safeValidWorkBlock 以
+     * maid=null 作选位活性校验，本方法判据依赖女仆坐标、null 无法判定——入口显式 false
+     * （语义与原「NPE 被 fork 吞成 false」一致：CRAFTING 无本地兜底选位），不再依赖异常吞没。</p>
      */
     @Override
     public boolean isValidWorkBlock(ServerLevel level, EntityMaid maid, BlockPos pos) {
+        if (maid == null) {
+            return false;
+        }
         if (maid.blockPosition().equals(pos)) {
             return true;
         }
@@ -270,7 +279,7 @@ public class CraftingTableCookTask implements ICookTask {
         RecipeHolder<?> holder = level.getRecipeManager().byKey(request.id).orElse(null);
         if (holder == null || !RecipeType.CRAFTING.equals(holder.value().getType())
                 || !(holder.value() instanceof CraftingRecipe recipe)) {
-            errorStall("crafting-recipe-missing:" + request.id, "合成台请求配方缺失或类型不符：{} @ {}", request.id, pos);
+            errorStall("crafting-recipe-missing:" + request.id + ":" + maid.getUUID(), "合成台请求配方缺失或类型不符：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
             return;
         }
 
@@ -322,7 +331,7 @@ public class CraftingTableCookTask implements ICookTask {
             if (take.isEmpty()) {
                 // 预检通过后抽取仍失败 = 并发/边界态：已抽部分回包 + WARN（30s 窗）
                 rollback(maid, extracted);
-                warnStall("crafting-partial-missing:" + request.id + ":" + maid.getUUID(), "合成台配料中途缺料，已抽原料回包等待补货：{} @ {}", request.id, pos);
+                warnStall("crafting-partial-missing:" + request.id + ":" + maid.getUUID(), "合成台配料中途缺料，已抽原料回包等待补货：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
                 return;
             }
             extracted.add(take);
@@ -338,14 +347,14 @@ public class CraftingTableCookTask implements ICookTask {
         // matches 安全门（F-130/131 同款纪律：不符必须响，不静默装正常）
         if (!recipe.matches(input, level)) {
             rollback(maid, extracted);
-            warnStall("crafting-matches-fail:" + request.id + ":" + maid.getUUID(), "合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{} @ {}", request.id, pos);
+            warnStall("crafting-matches-fail:" + request.id + ":" + maid.getUUID(), "合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
             return;
         }
 
         ItemStack result = recipe.assemble(input, level.registryAccess());
         if (result.isEmpty()) {
             rollback(maid, extracted);
-            errorStall("crafting-result-empty:" + request.id + ":" + maid.getUUID(), "合成台配方产物为空，原料已回包：{} @ {}", request.id, pos);
+            errorStall("crafting-result-empty:" + request.id + ":" + maid.getUUID(), "合成台配方产物为空，原料已回包：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
             return;
         }
         DeliveryUtil.deliverToMaidInv(maid, result);

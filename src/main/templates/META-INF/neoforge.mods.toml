@@ -11,7 +11,7 @@ description='''
 女仆餐厅：下得厨房 (Maid Restaurant: Kitchen-Ready)
 
 女仆餐厅 (maid_restaurant) 0.2.9 点单体系的补全包：
-本体管厅堂点单，本包掌勺其余约 70 类 ≈2500 条烹饪/酿造配方——
+本体管厅堂点单，本包掌勺其余约 30 类 ≈3000 条烹饪/酿造/切配/合成配方（29 任务门控注册，flex 两类已回滚不计）——
 腌菜罐、竹匾、冰箱、炉式烤熏、酿造桶、砧板切配……
 没有小厨娘下不了的厨房。
 '''
@@ -38,7 +38,7 @@ description='''
     ordering="AFTER"
     side="BOTH"
 
-# 森罗厨房：本体 0.2.9 硬依赖（运行环境必有），本包 M1 flex 打样与 M2 森罗系直接引用其类型
+# 森罗厨房：本体 0.2.9 硬依赖（运行环境必有），本包 M2/M4 森罗系任务直接引用其类型
 # modId 实测自 jar（2026-10-17）：jar 文件名 kaleidoscopecookery-1.6.0，但注册 id 是 kaleidoscope_cookery
 [[dependencies.${mod_id}]]
     modId="kaleidoscope_cookery"

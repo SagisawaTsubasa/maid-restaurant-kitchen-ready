@@ -65,11 +65,11 @@ public class FermentationBarrelCookTask extends AbstractTimedContainerCookTask<F
         return pos -> level.getBlockEntity(pos) instanceof FermentationBarrelBlockEntity;
     }
 
+    /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
         FermentationBarrelRecipe recipe = (FermentationBarrelRecipe) recipeHolder.value();
         // F-148：酒瓶是必需辅料（isWineBottleRequired），进取料单——女仆才会主动去仓库取瓶
-        /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
         java.util.List<StackPredicate> ans = recipe.getIngredients().stream()
                 .filter(i -> !i.isEmpty()).map(StackPredicate::new)
                 .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
