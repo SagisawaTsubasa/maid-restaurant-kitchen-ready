@@ -55,11 +55,14 @@ public final class CookTaskRegistry {
 
     /**
      * mod 构造期调用：按门控把全部任务入本体暂存队列。
-     * M1：森罗三类（竹匾/茶壶/菜板，必需链常在）；M2+ 各家族追加。
-     * flex 模糊配方两类永不接（2026-10-22 用户决议，归属本体上游/营业中 fork）。
+     * 各家族按里程碑门控追加（竹匾/茶壶=M2、菜板=M4）。
+     * flex 模糊配方两类永不接（2026-10-22 用户决议，归属本体上游/营业中 fork）：
+     * FlexPotCookTask（flex_pot 47 条）/ FlexStockpotCookTask（flex_stockpot 51 条）已随
+     * 0.2.4 回滚整类删除、注册点同步移除；日后若重接，禁止直接引用本体 mixin accessor
+     * （IllegalClassLoadError，沿台账 F-1 的缓存反射模式读取私有字段）。
      */
     public static void registerAll() {
-        // 森罗（T1 打样）：本体硬依赖链，KALEIDOSCOPE_COOKERY 恒真，门控保留为纪律示范
+        // 森罗（M2 竹匾/茶壶 + M4 菜板接入）：本体硬依赖链，KALEIDOSCOPE_COOKERY 恒真，门控保留为纪律示范
         if (CompatMods.KALEIDOSCOPE_COOKERY) {
             // M2 森罗余量：竹匾（自环境计时）、茶壶（注液+补放闭环）
             registerTask(new BambooTrayCookTask());
@@ -129,7 +132,7 @@ public final class CookTaskRegistry {
             registerTask(new FidworkblockCookTask());
         }
 
-        MaidRestaurantCooking.LOGGER.info("[kitchen-ready] CookTask 构造期入队完成（门控分流后）");
+        MaidRestaurantCooking.LOGGER.info("[kitchen-ready] CookTask 构造期入队完成（门控分流后）：共 {} 个", QUEUED.size());
     }
 
     /** 构造期直通：把任务交给本体暂存队列。仅限 mod 构造期调用。
