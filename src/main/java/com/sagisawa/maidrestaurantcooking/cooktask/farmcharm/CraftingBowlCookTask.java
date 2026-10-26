@@ -36,8 +36,8 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
 
     private static final int OUTPUT_SLOT = 4;
 
-    /** F-147：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long stallLastWarnMs;
+    // F-286（R9 发现 6）：旧 stallLastWarnMs 单时间戳窗已删——碗内异物 WARN 迁基类 logWindows
+    // shouldLogKey per-key（键=bowl-foreign:订单id:女仆UUID），不再跨女仆互吞（F-147/F-241 同族）
 
     @Override
     public String getUID() {
@@ -73,7 +73,10 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
-        CraftingBowlRecipe recipe = (CraftingBowlRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof CraftingBowlRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         return recipe.getIngredients().stream().filter(i -> !i.isEmpty()).map(StackPredicate::new)
                 .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
     }
@@ -168,8 +171,7 @@ public class CraftingBowlCookTask extends AbstractTimedContainerCookTask<Craftin
                 ItemStack scan = bowl.getItem(i);
                 if (!scan.isEmpty() && scan.getItem() != bowlExpect.getItem()
                         && recipe.getIngredients().stream().noneMatch(ing -> ing.test(scan))) {
-                    if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                        stallLastWarnMs = System.currentTimeMillis();
+                    if (shouldLogKey("bowl-foreign:" + request.id + ":" + maid.getUUID())) {
                         MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 搅拌碗内存在异物（{}），不驱动：{} @ {}", scan.getItem(), request.id, pos);
                     }
                     return;

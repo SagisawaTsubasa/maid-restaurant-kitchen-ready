@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /**
@@ -68,13 +69,29 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         return FurnaceRouting.targetBlock(routingKey());
     }
 
+    /** F-286（R9 发现 6）：停摆 WARN 的 30s 窗表与 shouldLog（键=消息码:目标或订单id:女仆UUID，仿
+     * StoveCookTask.logWindows；旧 misconfiguredLastWarnMs/noFuelLastWarnMs 双单时间戳窗已删——
+     * 任务每类型单例下跨女仆互吞，F-122/F-140/F-241 同族）。本类直实现 ICookTask，窗表自持。 */
+    private final ConcurrentHashMap<String, Long> logWindows = new ConcurrentHashMap<>();
+
+    /** 30s 窗内同键只响一次（过期条目顺手清理，F-241 同款）。 */
+    private boolean shouldLog(String code) {
+        long now = System.currentTimeMillis();
+        Long until = logWindows.get(code);
+        if (until != null && now < until) {
+            return false;
+        }
+        if (logWindows.size() > 64) {
+            logWindows.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        logWindows.put(code, now + 30_000L);
+        return true;
+    }
+
     @Override
     public String getUID() {
         return "FurnaceRoutingCookTask." + routingKey();
     }
-
-    /** F-122/F-137：路由误配 WARN 上次响出时间戳（30s 时间窗去重，重载后自然恢复）。 */
-    private volatile long misconfiguredLastWarnMs;
 
     @Nullable
     @Override
@@ -95,21 +112,25 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
                 pos -> beCheck.test(pos) && BlockUsageManager.getUserCount(pos) <= 0
         );
         if (found.isEmpty() && target != null) {
-            // F-128：区分"方块在场但 BE 不符"（确凿误配，响出）与"方块未放置"（不误报）
-            boolean idPresentButWrongBe = false;
-            for (BlockPos p : BlockPos.withinManhattan(center, horizontalSearchRange, verticalSearchRange, horizontalSearchRange)) {
-                if (target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()))
-                        && !(level.getBlockEntity(p) instanceof AbstractFurnaceBlockEntity)) {
-                    idPresentButWrongBe = true;
-                    break;
-                }
-            }
-            if (idPresentButWrongBe && System.currentTimeMillis() - misconfiguredLastWarnMs > 30_000L) {
-                misconfiguredLastWarnMs = System.currentTimeMillis();
+            // F-128：区分"方块在场但 BE 不符"（确凿误配，响出）与"方块未放置"（不误报）；
+            // F-286：窗键=消息码:路由目标:女仆UUID（searchWorkBlock 无订单上下文，目标+女仆即身份）
+            if (idPresentButWrongBe(level, center, horizontalSearchRange, verticalSearchRange, target)
+                    && shouldLog("furnace-misconfigured:" + target + ":" + maid.getUUID())) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉式路由目标 {} 的 BE 非炉类（误配）：该类型挂起且不会回落原版炉：{}", target, getUID());
             }
         }
         return !found.isEmpty() ? found.stream().min(Comparator.comparingDouble(p -> p.distSqr(maid.blockPosition()))).get() : null;
+    }
+
+    /** F-128 判据提方法（searchWorkBlock 主流程提净）："方块在场但 BE 不符"=确凿误配。 */
+    private static boolean idPresentButWrongBe(ServerLevel level, BlockPos center, int horizontalSearchRange, int verticalSearchRange, ResourceLocation target) {
+        for (BlockPos p : BlockPos.withinManhattan(center, horizontalSearchRange, verticalSearchRange, horizontalSearchRange)) {
+            if (target.equals(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()))
+                    && !(level.getBlockEntity(p) instanceof AbstractFurnaceBlockEntity)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -204,10 +225,8 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
         }
     }
 
-    /** F-140：无燃料 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long noFuelLastWarnMs;
-
-    /** 补 1 个燃料（调用方保证：!lit 且燃料槽空）；女仆无燃料时响出（F-140：防订单静默永挂）。 */
+    /** 补 1 个燃料（调用方保证：!lit 且燃料槽空）；女仆无燃料时响出（F-140：防订单静默永挂；
+     * F-286：窗键=no-fuel:订单id:女仆UUID per-key，旧单时间戳窗已删）。 */
     private void topUpFuel(ServerLevel level, EntityMaid maid, BlockPos pos, AbstractFurnaceBlockEntity furnace, CookRequest request) {
         ItemStack fuel = ItemHandlerUtils.tryExtractSingleSlot(maid.getAvailableInv(false), 1,
                 StackPredicate.of(AbstractFurnaceBlockEntity::isFuel), true);
@@ -215,8 +234,7 @@ public abstract class AbstractFurnaceRoutingCookTask<T extends AbstractCookingRe
             furnace.setItem(1, fuel);
             furnace.setChanged();
             maid.swing(InteractionHand.OFF_HAND);
-        } else if (System.currentTimeMillis() - noFuelLastWarnMs > 30_000L) {
-            noFuelLastWarnMs = System.currentTimeMillis();
+        } else if (shouldLog("no-fuel:" + request.id + ":" + maid.getUUID())) {
             MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 炉等待点火但女仆无燃料，订单挂起：{} @ {}", request.id, pos);
         }
     }

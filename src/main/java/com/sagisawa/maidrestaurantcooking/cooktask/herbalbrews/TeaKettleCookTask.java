@@ -36,8 +36,8 @@ import java.util.function.Predicate;
  */
 public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleRecipe> {
 
-    /** F-155：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long stallLastWarnMs;
+    // F-286（R9 发现 6）：旧 stallLastWarnMs 单时间戳窗已删——水槽/燃料槽异物两条消息迁基类
+    // logWindows shouldLogKey per-key（键=消息码:订单id:女仆UUID），不再共用一窗互吞（F-155/F-241 同族）
 
     private static final int SLOT_OUTPUT = 0;
     private static final int SLOT_INGREDIENT_FIRST = 1;
@@ -84,7 +84,10 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
-        TeaKettleRecipe recipe = (TeaKettleRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof TeaKettleRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         List<StackPredicate> ans = new ArrayList<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
             if (!ingredient.isEmpty()) {
@@ -146,16 +149,14 @@ public class TeaKettleCookTask extends AbstractTimedContainerCookTask<TeaKettleR
         // F-155：水/燃料槽被非标签异物占据 → WARN 停摆（防订单无声永挂）
         ItemStack waterSlot = kettle.getItem(SLOT_WATER);
         if (!waterSlot.isEmpty() && !waterSlot.is(TagsRegistry.SMALL_WATER_FILL) && !waterSlot.is(TagsRegistry.LARGE_WATER_FILL)) {
-            if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                stallLastWarnMs = System.currentTimeMillis();
+            if (shouldLogKey("water-foreign:" + request.id + ":" + maid.getUUID())) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 煮茶壶水槽为非注水物品（{}），停摆待处理：{} @ {}", waterSlot.getItem(), request.id, pos);
             }
             return;
         }
         ItemStack heatSlot = kettle.getItem(SLOT_HEAT);
         if (!heatSlot.isEmpty() && !heatSlot.is(TagsRegistry.HEAT_ITEMS)) {
-            if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                stallLastWarnMs = System.currentTimeMillis();
+            if (shouldLogKey("heat-foreign:" + request.id + ":" + maid.getUUID())) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 煮茶壶燃料槽为非燃料物品（{}），停摆待处理：{} @ {}", heatSlot.getItem(), request.id, pos);
             }
             return;

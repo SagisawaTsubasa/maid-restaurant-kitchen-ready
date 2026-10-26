@@ -59,8 +59,8 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                 System.currentTimeMillis() + durationMs);
     }
 
-    /** F-156：锅满 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long stallLastWarnMs;
+    // F-286（R9 发现 6）：旧 stallLastWarnMs 单时间戳窗已删——锅满 WARN 迁基类 logWindows shouldLogKey
+    // per-key（键=pot-full:订单id:女仆UUID），不再跨女仆互吞（F-156/F-241 同族）
 
     @Override
     public String getUID() {
@@ -101,7 +101,10 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
-        MonsterPotRecipe recipe = (MonsterPotRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof MonsterPotRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         List<StackPredicate> ans = new ArrayList<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
             if (!ingredient.isEmpty()) {
@@ -208,10 +211,9 @@ public class MonsterPotCookTask extends AbstractTimedContainerCookTask<MonsterPo
                     // F-003+F-156/F-160：按本次放入判定归还；锅满设站点退避+响出（30s 窗）
                     DeliveryUtil.deliverToMaidInv(maid, take);
                     setBackoff(level, pos, 30_000L);
-                    if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                        stallLastWarnMs = System.currentTimeMillis();
+                    if (shouldLogKey("pot-full:" + request.id + ":" + maid.getUUID())) {
                         MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 怪物锅配料槽满，原料回包待重试：{} @ {}", request.id, pos);
-                }
+                    }
                 }
             }
         }

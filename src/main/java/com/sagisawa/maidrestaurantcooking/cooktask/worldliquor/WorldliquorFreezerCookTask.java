@@ -44,8 +44,8 @@ import java.util.function.Predicate;
  */
 public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<FreezerRecipe> {
 
-    /** F-156：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long stallLastWarnMs;
+    // F-286（R9 发现 6）：旧 stallLastWarnMs 单时间戳窗已删——输入槽满 WARN 迁基类 logWindows
+    // shouldLogKey per-key（键=input-full:订单id:女仆UUID），不再跨女仆互吞（F-156/F-241 同族）
 
     /** F-160：站点键控退避（同 MonsterPot）。 */
     private record StationKey(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
@@ -106,7 +106,10 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
-        FreezerRecipe recipe = (FreezerRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof FreezerRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         List<StackPredicate> ans = new ArrayList<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
             if (!ingredient.isEmpty()) {
@@ -255,10 +258,9 @@ public class WorldliquorFreezerCookTask extends AbstractTimedContainerCookTask<F
             if (!putIn) {
                 DeliveryUtil.deliverToMaidInv(maid, material);
                 setBackoff(level, pos, 30_000L);
-                if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                    stallLastWarnMs = System.currentTimeMillis();
+                if (shouldLogKey("input-full:" + request.id + ":" + maid.getUUID())) {
                     MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰柜输入槽满，原料回包待重试：{} @ {}", request.id, pos);
-            }
+                }
             }
         }
     }

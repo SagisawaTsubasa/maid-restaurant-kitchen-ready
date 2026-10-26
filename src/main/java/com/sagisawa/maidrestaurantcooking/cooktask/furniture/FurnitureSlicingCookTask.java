@@ -31,8 +31,8 @@ import java.util.function.Predicate;
  */
 public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<CuttingBoardSlicingRecipe> {
 
-    /** F-144：砧板被占 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long busyLastWarnMs;
+    // F-286（R9 发现 6，grep 补漏——R9 表未列本文件）：旧 busyLastWarnMs 单时间戳窗已删——板被占
+    // WARN 迁基类 logWindows shouldLogKey per-key（键=board-busy:订单id:女仆UUID），不再跨女仆互吞（F-144 同族）
 
     /** F-160：站点键控退避（任务实例跨维度共享，退避必须按 维度+坐标 区分；过期条目顺手清理）。 */
     private record StationKey(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
@@ -100,7 +100,10 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
-        CuttingBoardSlicingRecipe recipe = (CuttingBoardSlicingRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof CuttingBoardSlicingRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         List<StackPredicate> ans = new java.util.ArrayList<>();
         ans.add(StackPredicate.of(recipe.getIngredient()));
         return ans;
@@ -156,10 +159,9 @@ public class FurnitureSlicingCookTask extends AbstractTimedContainerCookTask<Cut
             // F-144/F-153：板被占（他单在切）——还料+WARN（30s 窗）+设 30s 退避（窗内 cookTick 直接返回）
             DeliveryUtil.deliverToMaidInv(maid, take);
             setBackoff(level, pos, 30_000L);
-            if (System.currentTimeMillis() - busyLastWarnMs > 30_000L) {
-                busyLastWarnMs = System.currentTimeMillis();
+            if (shouldLogKey("board-busy:" + request.id + ":" + maid.getUUID())) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 家具砧板被占，原料回包待重试：{} @ {}", request.id, pos);
-        }
+            }
         }
     }
 }

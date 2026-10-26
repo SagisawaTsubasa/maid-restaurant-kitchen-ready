@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 森罗厨房「茶壶」（kaleidoscope_cookery:teapot，20 条）的女仆烹饪任务。
@@ -52,8 +53,24 @@ import java.util.List;
  */
 public class TeapotCookTask implements ICookTask {
 
-    /** F-151：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long stallLastWarnMs;
+    /** F-286（R9 发现 6）：停摆 WARN 的 30s 窗（键=消息码:订单id:女仆UUID，仿 StoveCookTask.logWindows；
+     * 旧 stallLastWarnMs 单时间戳窗已删——任务单例下跨女仆互吞，F-151/F-241 同族）。
+     * 本类直实现 ICookTask（非定时容器基类子类），窗表自持。 */
+    private final ConcurrentHashMap<String, Long> logWindows = new ConcurrentHashMap<>();
+
+    /** 30s 窗内同键只响一次（过期条目顺手清理，F-241 同款）。 */
+    private boolean shouldLog(String code) {
+        long now = System.currentTimeMillis();
+        Long until = logWindows.get(code);
+        if (until != null && now < until) {
+            return false;
+        }
+        if (logWindows.size() > 64) {
+            logWindows.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        logWindows.put(code, now + 30_000L);
+        return true;
+    }
 
     @Override
     public String getUID() {
@@ -73,7 +90,10 @@ public class TeapotCookTask implements ICookTask {
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends Recipe<?>> recipeHolder, Level level) {
-        TeapotRecipe recipe = (TeapotRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof TeapotRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         // 流体容器谓词：任意流体容器首罐 ≥1000mB 且流体与配方一致；配料 1 个
         StackPredicate fluidContainer = StackPredicate.of(stack -> hasFluid(stack, recipe.teaFluid()));
         List<StackPredicate> ans = new ArrayList<>();
@@ -183,8 +203,7 @@ public class TeapotCookTask implements ICookTask {
                     }
                 } else if (!recipe.ingredient().test(teapot.getInput())) {
                     // F-145/F-151：壶内输入为非本单原料（遗留物）——响出停摆（带窗），不覆盖
-                    if (System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                        stallLastWarnMs = System.currentTimeMillis();
+                    if (shouldLog("input-foreign:" + request.id + ":" + maid.getUUID())) {
                         MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 茶壶内为非本单原料（{}），停摆待处理：{} @ {}", teapot.getInput().getItem(), request.id, pos);
                     }
                 }

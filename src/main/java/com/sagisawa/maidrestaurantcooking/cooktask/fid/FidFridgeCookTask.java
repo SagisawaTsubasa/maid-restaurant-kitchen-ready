@@ -38,8 +38,8 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
     /** 冷藏输入 27 / 冰冻输入 29。 */
     protected abstract int inputSlot();
 
-    /** F-141：停摆 WARN 上次响出时间戳（30s 时间窗去重）。 */
-    private volatile long stallLastWarnMs;
+    // F-286（R9 发现 6）：旧 stallLastWarnMs 单时间戳窗已删——输入槽异物 WARN 迁基类 logWindows
+    // shouldLogKey per-key（键=input-foreign:订单id:女仆UUID），不再跨女仆互吞（F-141/F-241 同族）
 
     /** 冷藏输出 28 / 冰冻输出 30。 */
     protected abstract int outputSlot();
@@ -122,8 +122,7 @@ public abstract class FidFridgeCookTask<R extends Recipe<?>> extends AbstractTim
         // 输入槽已有料：本单原料 → 等；异物 → WARN 停摆（F-132/F-141：30s 时间窗防刷屏）
         ItemStack pending = fridge.getItem(inputSlot());
         if (!pending.isEmpty()) {
-            if (!ingredient.test(pending) && System.currentTimeMillis() - stallLastWarnMs > 30_000L) {
-                stallLastWarnMs = System.currentTimeMillis();
+            if (!ingredient.test(pending) && shouldLogKey("input-foreign:" + request.id + ":" + maid.getUUID())) {
                 MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] 冰箱输入槽为非本单原料（{}），停摆待处理：{} @ {}", pending.getItem(), request.id, pos);
             }
             return;

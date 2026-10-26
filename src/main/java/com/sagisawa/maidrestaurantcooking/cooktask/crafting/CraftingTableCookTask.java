@@ -283,94 +283,131 @@ public class CraftingTableCookTask implements ICookTask {
             return;
         }
 
-        // 抽料布局：shaped 按配方网格原位摆放；shapeless 紧凑散放于 3×3 前段
-        // （canCraft 与位置无关，紧凑排布保证 ofPositioned 裁剪出连续包围盒）。
-        NonNullList<Ingredient> ingredients = recipe.getIngredients();
-        ShapedRecipe shapedRecipe = recipe instanceof ShapedRecipe sr ? sr : null;
-        boolean shaped = shapedRecipe != null;
-        int w = shaped ? shapedRecipe.getWidth() : 3;
-        int h = shaped ? shapedRecipe.getHeight() : 3;
-
+        // 三面同构·异常防护子项（F-272 同族）：坏配方在 getIngredients/matches/assemble 等处抛异常
+        // 不崩线程——已抽原料回包 + 30s 窗 ERROR 可见（键=消息码:订单id:女仆UUID）；链驱动面据此
+        // 走「本轮未核销停等」语义（F-261），不再向上传播炸 maid 脑 tick
         List<ItemStack> extracted = new ArrayList<>();
-        List<ItemStack> layout = new ArrayList<>(w * h);
-        for (int i = 0; i < w * h; i++) {
-            layout.add(ItemStack.EMPTY);
-        }
-        int cursor = 0;
-        // F-190/F-195：齐备预检——逐份配料做包内多重集合消耗模拟（每份配料从槽位级模拟计数中
-        // 扣减，任一份扣减后为负即缺料），修复面包 3×小麦类重复配料按槽独立计数导致的
-        // 预检误过→抽取失败→回包 20Hz churn；齐了才动抽取（防持续缺料时 20Hz 抽还 churn）
-        var inv = maid.getAvailableInv(false);
-        int invSlots = inv.getSlots();
-        int[] consumed = new int[invSlots];
-        for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
-            Ingredient ingredient = ingredients.get(idx);
-            if (ingredient.isEmpty()) {
-                continue;
+        // F-281（R9 发现 1）：交付状态标志——catch 回滚只对「尚未交付产物」生效。旧实现对整段
+        // try 一律回滚：交付后（getRemainingItems 容器返还/第三方 handler）再抛异常时产物已进包、
+        // 原料又被退回=同一份原料产出两份成品的复制面
+        boolean delivered = false;
+        try {
+            // 抽料布局：shaped 按配方网格原位摆放；shapeless 紧凑散放于 3×3 前段
+            // （canCraft 与位置无关，紧凑排布保证 ofPositioned 裁剪出连续包围盒）。
+            NonNullList<Ingredient> ingredients = recipe.getIngredients();
+            ShapedRecipe shapedRecipe = recipe instanceof ShapedRecipe sr ? sr : null;
+            boolean shaped = shapedRecipe != null;
+            int w = shaped ? shapedRecipe.getWidth() : 3;
+            int h = shaped ? shapedRecipe.getHeight() : 3;
+
+            List<ItemStack> layout = new ArrayList<>(w * h);
+            for (int i = 0; i < w * h; i++) {
+                layout.add(ItemStack.EMPTY);
             }
-            boolean available = false;
-            for (int s = 0; s < invSlots; s++) {
-                ItemStack stack = inv.getStackInSlot(s);
-                if (stack.getCount() - consumed[s] > 0 && ingredient.test(stack)) {
-                    consumed[s]++;
-                    available = true;
-                    break;
+            int cursor = 0;
+            // F-190/F-195：齐备预检——逐份配料做包内多重集合消耗模拟（每份配料从槽位级模拟计数中
+            // 扣减，任一份扣减后为负即缺料），修复面包 3×小麦类重复配料按槽独立计数导致的
+            // 预检误过→抽取失败→回包 20Hz churn；齐了才动抽取（防持续缺料时 20Hz 抽还 churn）
+            var inv = maid.getAvailableInv(false);
+            int invSlots = inv.getSlots();
+            int[] consumed = new int[invSlots];
+            for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
+                Ingredient ingredient = ingredients.get(idx);
+                if (ingredient.isEmpty()) {
+                    continue;
+                }
+                boolean available = false;
+                for (int s = 0; s < invSlots; s++) {
+                    ItemStack stack = inv.getStackInSlot(s);
+                    if (stack.getCount() - consumed[s] > 0 && ingredient.test(stack)) {
+                        consumed[s]++;
+                        available = true;
+                        break;
+                    }
+                }
+                if (!available) {
+                    return; // 缺料静默等待（未抽取零 churn；补货到位后下 tick 通过预检再抽）
                 }
             }
-            if (!available) {
-                return; // 缺料静默等待（未抽取零 churn；补货到位后下 tick 通过预检再抽）
+            for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
+                Ingredient ingredient = ingredients.get(idx);
+                if (ingredient.isEmpty()) {
+                    continue;
+                }
+                ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(inv, 1,
+                        StackPredicate.of(ingredient), true);
+                if (take.isEmpty()) {
+                    // 预检通过后抽取仍失败 = 并发/边界态：已抽部分回包 + WARN（30s 窗）
+                    rollback(maid, extracted);
+                    warnStall("crafting-partial-missing:" + request.id + ":" + maid.getUUID(), "合成台配料中途缺料，已抽原料回包等待补货：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
+                    return;
+                }
+                extracted.add(take);
+                layout.set(shaped ? idx : cursor++, take);
             }
-        }
-        for (int idx = 0; idx < w * h && idx < ingredients.size(); idx++) {
-            Ingredient ingredient = ingredients.get(idx);
-            if (ingredient.isEmpty()) {
-                continue;
-            }
-            ItemStack take = ItemHandlerUtils.tryExtractSingleSlot(inv, 1,
-                    StackPredicate.of(ingredient), true);
-            if (take.isEmpty()) {
-                // 预检通过后抽取仍失败 = 并发/边界态：已抽部分回包 + WARN（30s 窗）
-                rollback(maid, extracted);
-                warnStall("crafting-partial-missing:" + request.id + ":" + maid.getUUID(), "合成台配料中途缺料，已抽原料回包等待补货：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
+            if (extracted.isEmpty()) {
+                // F-190/F-261：到此处即异常配方（无任何非空配料）——errorStall 可见不再静默（旧静默 return
+                // 致 request.remain 永不核销、订单无声挂起；缺料已在预检层返回，本路径仅零配料配方可达，
+                // 正常过滤后属 /reload 换配方等残留态）
+                errorStall("crafting-no-ingredients:" + request.id + ":" + maid.getUUID(),
+                        "合成台配方无任何非空配料（异常配方），订单停摆：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
                 return;
             }
-            extracted.add(take);
-            layout.set(shaped ? idx : cursor++, take);
-        }
-        if (extracted.isEmpty()) {
-            // F-190：到此处即异常配方（无任何非空配料）——静默跳过（缺料已在预检层返回，非缺料路径）
-            return;
-        }
 
-        CraftingInput input = CraftingInput.of(w, h, layout);
+            CraftingInput input = CraftingInput.of(w, h, layout);
 
-        // matches 安全门（F-130/131 同款纪律：不符必须响，不静默装正常）
-        if (!recipe.matches(input, level)) {
-            rollback(maid, extracted);
-            warnStall("crafting-matches-fail:" + request.id + ":" + maid.getUUID(), "合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
-            return;
-        }
+            // matches 安全门（F-130/131 同款纪律：不符必须响，不静默装正常）
+            if (!recipe.matches(input, level)) {
+                rollback(maid, extracted);
+                warnStall("crafting-matches-fail:" + request.id + ":" + maid.getUUID(), "合成台配方 matches 不符（构造布局与配方不匹配），原料已回包：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
+                return;
+            }
 
-        ItemStack result = recipe.assemble(input, level.registryAccess());
-        if (result.isEmpty()) {
-            rollback(maid, extracted);
-            errorStall("crafting-result-empty:" + request.id + ":" + maid.getUUID(), "合成台配方产物为空，原料已回包：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
-            return;
-        }
-        DeliveryUtil.deliverToMaidInv(maid, result);
+            ItemStack result = recipe.assemble(input, level.registryAccess());
+            if (result.isEmpty()) {
+                rollback(maid, extracted);
+                errorStall("crafting-result-empty:" + request.id + ":" + maid.getUUID(), "合成台配方产物为空，原料已回包：{} @ {} 女仆={}", request.id, pos, maid.getName().getString());
+                return;
+            }
 
-        // 容器返还（牛奶桶→空桶等）：1.21.1 Recipe.getRemainingItems(input) 无 Level 参数
-        for (ItemStack remainder : recipe.getRemainingItems(input)) {
-            if (!remainder.isEmpty()) {
+            // F-281：容器返还清单提前到交付前算全（getRemainingItems 提前）——坏配方在容器返还通道
+            // 抛异常时交付尚未发生，catch 回滚安全；旧序在 deliver 之后调 getRemainingItems，恰是
+            // 「产物已交付+原料回包」复制面的主要触发点
+            List<ItemStack> remainders = new ArrayList<>();
+            for (ItemStack remainder : recipe.getRemainingItems(input)) {
+                if (!remainder.isEmpty()) {
+                    remainders.add(remainder);
+                }
+            }
+
+            // F-281：交付点——产物落包即置 delivered，订单核销紧贴交付（份数账与包内实物一致）；
+            // 此后任何异常路径（容器返还失败等）只丢容器返还物（如空桶），绝不退原料
+            DeliveryUtil.deliverToMaidInv(maid, result);
+            delivered = true;
+            // F-175/R5-F-248：remain=份数语义（order.count 口径，UIConfirmTag/UIOrderTag/NetworkHandler
+            // 同语义实证）——每成功合成一次核销 1 份，与全任务族 request.remain-- 对齐。单次合成的
+            // 全部产物（result.getCount()，曲奇×8 等）整批交付（进女仆包，超出订单部分属配方固有
+            // 产出，不折抵份数）；count>1 的多产物订单按份数推进（每份产出 result.getCount() 个）。
+            // 链式 driveSteps 的 mem.remain=step.crafts()（合成份数）据此自然正确。
+            request.remain = Math.max(0, request.remain - 1);
+
+            // 容器返还（牛奶桶→空桶等）：1.21.1 Recipe.getRemainingItems(input) 无 Level 参数
+            for (ItemStack remainder : remainders) {
                 DeliveryUtil.deliverToMaidInv(maid, remainder);
             }
+            maid.swing(InteractionHand.OFF_HAND);
+        } catch (Exception e) {
+            // F-281：回滚与交付状态绑定——已交付（delivered=true）不退原料（防复制，宁可丢容器返还物），
+            // 未交付照旧全回包
+            if (!delivered) {
+                rollback(maid, extracted);
+            }
+            errorStall("crafting-tick-error:" + request.id + ":" + maid.getUUID(),
+                    delivered
+                            ? "合成台配方执行异常（产物已交付，原料不回滚防复制）：{} @ {} 女仆={}：{}"
+                            : "合成台配方执行异常，已抽原料回包：{} @ {} 女仆={}：{}",
+                    request.id, pos, maid.getName().getString(), e.toString());
         }
-
-        // F-175：产物数量对账——合成台产物数量常态 ≠1（曲奇×8 等），最小合成单位=result.getCount()；
-        // 单次合成核销 min(count, remain)，超出订单部分同批交付（进女仆包，属配方固有产出）
-        int delivered = Math.min(result.getCount(), request.remain);
-        request.remain = Math.max(0, request.remain - delivered);
-        maid.swing(InteractionHand.OFF_HAND);
     }
 
     /** 已抽原料回包（满槽/缺料/matches 失败共用收口）。 */
@@ -386,11 +423,31 @@ public class CraftingTableCookTask implements ICookTask {
             return List.of();
         }
         List<RecipeData> ans = new ArrayList<>();
-        for (RecipeHolder<CraftingRecipe> holder : level.getRecipeManager().getAllRecipesFor(RecipeType.CRAFTING)) {
-            ItemStack result = holder.value().getResultItem(level.registryAccess());
-            // 食物过滤：仅可食产物进点单（同炉式族 FOOD 组件判据）
-            if (!result.isEmpty() && result.has(DataComponents.FOOD)) {
+        // F-272：与索引面（ChainResolver.build）同构硬化——① 擦除安全遍历（CRAFTING 类型容器可装
+        // 非 CraftingRecipe 配方，增强 for 的编译期强转会在 holder.value() 处 CCE 崩菜单构建线程）；
+        // ② per-recipe try/catch（坏配方 getIngredients/getResultItem 抛异常只跳过该条，不崩建单）
+        for (RecipeHolder<?> holder : (List<RecipeHolder<?>>) (List<?>) level.getRecipeManager()
+                .getAllRecipesFor(RecipeType.CRAFTING)) {
+            try {
+                // F-239：与执行器接受面同构——非 CraftingRecipe 实例的 CRAFTING 型配方不入菜单
+                if (!(holder.value() instanceof CraftingRecipe cr)) {
+                    continue;
+                }
+                // F-261：零/全空配料配方不入点单菜单（自定义 CraftingRecipe 合法存在）——可下单但执行器
+                // 永不能核销、订单无声挂起；与索引面（ChainResolver.build）/执行器面（cookTick errorStall）三面同口径
+                if (cr.getIngredients().stream().allMatch(Ingredient::isEmpty)) {
+                    continue;
+                }
+                ItemStack result = cr.getResultItem(level.registryAccess());
+                // 食物过滤：仅可食产物进点单（同炉式族 FOOD 组件判据；null 防护与 build 面同式）
+                if (result == null || result.isEmpty() || !result.has(DataComponents.FOOD)) {
+                    continue;
+                }
                 ans.add(new RecipeData(holder.id(), RecipeType.CRAFTING, this.getIcon(), result));
+            } catch (Throwable t) {
+                // F-272：per-recipe 防护（同 build 面 catch Throwable）——跳过且可见（30s 窗 per-recipe 键）
+                warnStall("crafting-menu-skip:" + holder.id(),
+                        "合成台配方 {} 菜单建项失败，跳过：{}", holder.id(), t);
             }
         }
         return RecipeDataFilter.apply(ans);

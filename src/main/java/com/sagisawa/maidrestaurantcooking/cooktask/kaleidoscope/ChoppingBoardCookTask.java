@@ -68,7 +68,10 @@ public class ChoppingBoardCookTask extends AbstractTimedContainerCookTask<Choppi
     /** 契约（F-201）：本体 MaidStateManager.cookState 原地 addAll（0.2.9 all.java:8713），返回值必须可变——Stream.toList() 违约致 2026-10-20 崩服。 */
     @Override
     public List<StackPredicate> getIngredients(RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> recipeHolder, Level level) {
-        ChoppingBoardRecipe recipe = (ChoppingBoardRecipe) recipeHolder.value();
+        // F-282 同族：非本类配方返回空表（裸强转在取料面 CCE；可变契约 F-201）
+        if (!(recipeHolder.value() instanceof ChoppingBoardRecipe recipe)) {
+            return new java.util.ArrayList<>();
+        }
         List<StackPredicate> ans = new ArrayList<>();
         ans.add(StackPredicate.of(recipe.getIngredient()));
         ans.add(StackPredicate.of(s -> s.is(TagMod.KITCHEN_KNIFE)));

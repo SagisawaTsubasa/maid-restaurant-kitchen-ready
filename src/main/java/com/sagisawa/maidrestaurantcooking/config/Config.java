@@ -44,6 +44,14 @@ public final class Config {
      */
     public static final ModConfigSpec.BooleanValue CRAFTING_TABLE_ENABLED;
 
+    /**
+     * 链式合成开关（0.2.5）：厨师女仆做饭缺原料时自动求解子合成链（合成台类、深度≤3、
+     * 产物限含 FOOD 组件）并补料执行。默认 true。AUTO 门：营业 fork（maid_restaurant_business）
+     * 在场时本包自驱服务不启动（防与 fork 取料腿竞抽数据），fork 侧经 ChainCraftApi 软依赖集成——
+     * 本开关只作用于无 fork 自驱形态。运行时消费——构造期 config 未加载禁 .get()。
+     */
+    public static final ModConfigSpec.BooleanValue CHAIN_CRAFTING_ENABLED;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -73,6 +81,12 @@ public final class Config {
         builder.push("craftingTable")
                 .comment("合成台食物合成（M8）：false 时原版合成配方（产物含食物组件者）不进点单菜单；菜单过载时也可用 categoryToggles 填 \"minecraft:crafting\" 关停。");
         CRAFTING_TABLE_ENABLED = builder
+                .define("enabled", true);
+        builder.pop();
+
+        builder.push("chainCrafting")
+                .comment("链式合成：厨师女仆做饭缺原料时自动按产物→配方倒排索引求解子合成链（合成台类、深度≤3、子合成产物限食物），从附近容器补料后女仆原地空手合成中间产物。默认开；营业 fork 在场时自驱自动让位（AUTO 门），fork 走 API 集成。");
+        CHAIN_CRAFTING_ENABLED = builder
                 .define("enabled", true);
         builder.pop();
 

@@ -5,6 +5,7 @@ import com.mastermarisa.maid_restaurant.api.ICookTask;
 import com.mastermarisa.maid_restaurant.utils.BlockUsageManager;
 import com.mastermarisa.maid_restaurant.utils.SearchUtils;
 import com.mastermarisa.maid_restaurant.utils.component.RecipeData;
+import com.sagisawa.maidrestaurantcooking.MaidRestaurantCooking;
 import com.sagisawa.maidrestaurantcooking.utils.RecipeDataFilter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -48,6 +49,34 @@ public abstract class AbstractTimedContainerCookTask<R extends Recipe<?>> implem
     /** 配方产物（菜单展示与完成判定；须走目标 mod 公开访问器，禁碰 protected 字段）。 */
     protected abstract ItemStack recipeResult(R recipe, Level level);
 
+    // ------------------------------------------------------------------ 日志窗
+
+    /**
+     * F-282/F-286：30s 窗表与 shouldLogKey（仿 StoveCookTask/CraftingTableCookTask 模式），protected 供
+     * 未持自有窗表的子类直接复用（键=消息码:订单id:女仆UUID；任务每类型单例，键必须防跨单/跨女仆互吞，
+     * F-196/F-202 同族教训）。Stove/Fermentation 等已持同名私表的子类属字段遮蔽，各用各的，互不影响；
+     * 方法名取 shouldLogKey 避开其私有 shouldLog——同签名方法覆写不许收窄访问权（private 覆写
+     * protected 编译失败），字段遮蔽无此限制。
+     */
+    protected final java.util.concurrent.ConcurrentHashMap<String, Long> logWindows = new java.util.concurrent.ConcurrentHashMap<>();
+    protected static final long LOG_WINDOW_MS = 30_000L;
+
+    /** 30s 窗内同键只响一次（过期条目顺手清理，F-241 同款）。 */
+    protected boolean shouldLogKey(String code) {
+        long now = System.currentTimeMillis();
+        Long until = logWindows.get(code);
+        if (until != null && now < until) {
+            return false;
+        }
+        if (logWindows.size() > 64) {
+            logWindows.entrySet().removeIf(e -> e.getValue() < now);
+        }
+        logWindows.put(code, now + LOG_WINDOW_MS);
+        return true;
+    }
+
+    // ------------------------------------------------------------------ 接口面
+
     @Override
     public RecipeType<?> getType() {
         return recipeType();
@@ -70,8 +99,34 @@ public abstract class AbstractTimedContainerCookTask<R extends Recipe<?>> implem
     @SuppressWarnings({"unchecked", "rawtypes"})
     public List<RecipeData> getAllRecipeData(Level level) {
         List<RecipeData> ans = new ArrayList<>();
-        for (RecipeHolder<R> holder : (List<RecipeHolder<R>>) (List<?>) level.getRecipeManager().getAllRecipesFor((RecipeType) recipeType())) {
-            ans.add(new RecipeData(holder.id(), recipeType(), this.getIcon(), recipeResult(holder.value(), level)));
+        // F-282（F-272 同族，与 CRAFTING 菜单面 CraftingTableCookTask.getAllRecipeData 同构硬化）：
+        // ① 擦除安全遍历——增强 for 的 RecipeHolder<R> 编译期强转会在桥方法 checkcast 处对
+        //    非 R 配方 CCE 崩菜单构建线程，改 RecipeHolder<?> 裸遍历；
+        // ② recipeClass().isInstance 守卫（与执行器接受面 resolveRecipe 同判据）——同 RecipeType 下
+        //    第三方注册的非本类配方跳过，不进菜单也不给 recipeResult 触发机会；
+        // ③ per-recipe try/catch——坏配方 recipeResult/getIngredients 抛异常只跳过该条，30s 窗
+        //    WARN 可见（键=menu-skip:配方id，与 CraftingTableCookTask crafting-menu-skip 同口径）；
+        // ④ 全空配料配方不入菜单（F-261 同口径——可下单但执行器永不能核销、订单无声挂起）；
+        //    判据=本任务 getIngredients（见循环内注释，勿换 Recipe#getIngredients 接口 default）。
+        for (RecipeHolder<?> holder : (List<RecipeHolder<?>>) (List<?>) level.getRecipeManager().getAllRecipesFor((RecipeType) recipeType())) {
+            if (!recipeClass().isInstance(holder.value())) {
+                continue;
+            }
+            try {
+                R recipe = recipeClass().cast(holder.value());
+                // F-261/F-282：全空配料不入菜单——判据用本任务 getIngredients（与执行器/链服务缺项
+                // 计算同源的 required 表，表空=订单永不能核销）。不用 Recipe#getIngredients 接口
+                // default：runServer 冒烟 R5 实证 FID FridgeFreezingRecipe 等自定义配料访问器配方
+                // 不覆写它（恒空表），按它过滤会把 FidFridge 整族菜单误杀（0 条回归）。
+                if (getIngredients(holder, level).isEmpty()) {
+                    continue;
+                }
+                ans.add(new RecipeData(holder.id(), recipeType(), this.getIcon(), recipeResult(recipe, level)));
+            } catch (Throwable t) {
+                if (shouldLogKey("menu-skip:" + holder.id())) {
+                    MaidRestaurantCooking.LOGGER.warn("[kitchen-ready] {} 配方 {} 菜单建项失败，跳过：{}", getUID(), holder.id(), t);
+                }
+            }
         }
         return RecipeDataFilter.apply(ans);
     }
