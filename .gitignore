@@ -24,3 +24,7 @@ libs/
 
 # 修订器历史遗留（file_revise.py 时代中断施工的陈旧副本，F-203）
 *.rev.tmp.stale*
+
+docs/scan/
+docs/口渴值数据-kubejs-20261015/
+docs/验证记录/
